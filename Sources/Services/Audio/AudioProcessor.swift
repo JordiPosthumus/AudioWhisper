@@ -11,6 +11,37 @@ internal enum AudioLoadError: Error {
 }
 
 internal func loadAudio(url: URL, samplingRate: Int) throws -> [Float] {
+    var samples: [Float] = []
+    try readAudioChunks(url: url, samplingRate: samplingRate) { chunk in
+        samples.append(contentsOf: chunk)
+    }
+    return samples
+}
+
+/// Writes the same mono Float32 samples as loadAudio without retaining the entire recording.
+internal func writeAudioPCM(url: URL, to destination: URL, samplingRate: Int) throws {
+    guard FileManager.default.createFile(atPath: destination.path, contents: nil) else {
+        throw CocoaError(.fileWriteUnknown)
+    }
+    do {
+        let output = try FileHandle(forWritingTo: destination)
+        defer { try? output.close() }
+        try readAudioChunks(url: url, samplingRate: samplingRate) { chunk in
+            try output.write(contentsOf: Data(buffer: chunk))
+        }
+    } catch {
+        try? FileManager.default.removeItem(at: destination)
+        throw error
+    }
+}
+
+/// The borrowed buffer is valid only for the duration of consume.
+private func readAudioChunks(
+    url: URL,
+    samplingRate: Int,
+    consume: (UnsafeBufferPointer<Float>) throws -> Void
+) throws {
+    guard samplingRate > 0 else { throw AudioLoadError.unsupportedFormat }
     var extAudioFile: ExtAudioFileRef?
     
     // Open the audio file
@@ -20,21 +51,8 @@ internal func loadAudio(url: URL, samplingRate: Int) throws -> [Float] {
     }
     defer { ExtAudioFileDispose(extFile) }
     
-    // Get file's original format and length
-    var fileFormat = AudioStreamBasicDescription()
-    var propertySize = UInt32(MemoryLayout<AudioStreamBasicDescription>.size)
-    status = ExtAudioFileGetProperty(extFile, kExtAudioFileProperty_FileDataFormat, &propertySize, &fileFormat)
-    guard status == noErr else {
-        throw AudioLoadError.getPropertyFailed(status)
-    }
-    
-    var fileLengthFrames: Int64 = 0
-    propertySize = UInt32(MemoryLayout<Int64>.size)
-    status = ExtAudioFileGetProperty(extFile, kExtAudioFileProperty_FileLengthFrames, &propertySize, &fileLengthFrames)
-    guard status == noErr else {
-        throw AudioLoadError.getPropertyFailed(status)
-    }
-    
+    var propertySize: UInt32
+
     // Define client format: mono, float32, target sample rate, interleaved/packed
     var clientFormat = AudioStreamBasicDescription(
         mSampleRate: Float64(samplingRate),
@@ -54,40 +72,26 @@ internal func loadAudio(url: URL, samplingRate: Int) throws -> [Float] {
         throw AudioLoadError.setPropertyFailed(status)
     }
     
-    // Estimate client length for preallocation (optional but efficient)
-    let fileSampleRate = fileFormat.mSampleRate
-    let duration = Double(fileLengthFrames) / fileSampleRate
-    let estimatedClientFrames = Int(duration * Double(samplingRate) + 0.5)
-    var samples: [Float] = []
-    samples.reserveCapacity(estimatedClientFrames)
-    
-    // Read in chunks until EOF
-    let bufferFrameSize = 4096  // Arbitrary chunk size; adjust if needed
+    // Keep memory bounded independently of the recording's duration.
+    let bufferFrameSize = 65_536
     var buffer = [Float](repeating: 0, count: bufferFrameSize)
-    
-    while true {
-        var numFrames = UInt32(bufferFrameSize)
-        
-        let audioBuffer = buffer.withUnsafeMutableBytes { bytes in
-            AudioBuffer(
-                mNumberChannels: 1,
-                mDataByteSize: UInt32(bufferFrameSize * MemoryLayout<Float>.size),
-                mData: bytes.baseAddress
+    try buffer.withUnsafeMutableBufferPointer { samples in
+        while true {
+            try Task.checkCancellation()
+            var numFrames = UInt32(bufferFrameSize)
+            var audioBufferList = AudioBufferList(
+                mNumberBuffers: 1,
+                mBuffers: AudioBuffer(
+                    mNumberChannels: 1,
+                    mDataByteSize: UInt32(bufferFrameSize * MemoryLayout<Float>.size),
+                    mData: samples.baseAddress
+                )
             )
+            // Keep the pointer within its borrowing scope during the native read.
+            status = ExtAudioFileRead(extFile, &numFrames, &audioBufferList)
+            guard status == noErr else { throw AudioLoadError.readFailed(status) }
+            guard numFrames > 0 else { break }
+            try consume(UnsafeBufferPointer(start: samples.baseAddress, count: Int(numFrames)))
         }
-        var audioBufferList = AudioBufferList(mNumberBuffers: 1, mBuffers: audioBuffer)
-        
-        status = ExtAudioFileRead(extFile, &numFrames, &audioBufferList)
-        guard status == noErr else {
-            throw AudioLoadError.readFailed(status)
-        }
-        
-        if numFrames == 0 {
-            break  // EOF
-        }
-        
-        samples.append(contentsOf: buffer[0..<Int(numFrames)])
     }
-    
-    return samples
 }

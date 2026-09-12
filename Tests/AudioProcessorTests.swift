@@ -48,6 +48,40 @@ final class AudioProcessorTests: XCTestCase {
         }
     }
 
+    func testStreamedPCMMatchesDecodedSamplesAcrossMultipleChunks() throws {
+        let samples = (0..<400_003).map { Float(sin(Double($0) * 0.03)) }
+        let input = try makeTempAudioFile(samples: samples, sampleRate: 48_000)
+        let output = FileManager.default.temporaryDirectory.appendingPathComponent(UUID().uuidString)
+        defer {
+            try? FileManager.default.removeItem(at: input)
+            try? FileManager.default.removeItem(at: output)
+        }
+        let expected = try loadAudio(url: input, samplingRate: 16_000)
+        try writeAudioPCM(url: input, to: output, samplingRate: 16_000)
+        XCTAssertEqual(try Data(contentsOf: output), expected.withUnsafeBytes { Data($0) })
+    }
+
+    func testStreamingFailureRemovesPartialOutput() throws {
+        let output = FileManager.default.temporaryDirectory.appendingPathComponent(UUID().uuidString)
+        XCTAssertThrowsError(try writeAudioPCM(
+            url: URL(fileURLWithPath: "/missing/\(UUID().uuidString)"),
+            to: output, samplingRate: 16_000
+        ))
+        XCTAssertFalse(FileManager.default.fileExists(atPath: output.path))
+    }
+
+    func testInvalidSampleRateIsRejected() throws {
+        let url = try makeTempAudioFile(samples: [0, 1, 0], sampleRate: 16_000)
+        defer { try? FileManager.default.removeItem(at: url) }
+        for rate in [0, -1] {
+            XCTAssertThrowsError(try loadAudio(url: url, samplingRate: rate)) { error in
+                guard case AudioLoadError.unsupportedFormat = error else {
+                    return XCTFail("Expected unsupportedFormat, got \(error)")
+                }
+            }
+        }
+    }
+
     // MARK: - Helpers
 
     private func makeTempAudioFile(samples: [Float], sampleRate: Double) throws -> URL {
