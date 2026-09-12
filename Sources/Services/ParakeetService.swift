@@ -82,7 +82,7 @@ internal class ParakeetService {
         return hasWeights
     }
     
-    private func processAudioToRawPCM(audioFileURL: URL) async throws -> URL {
+    internal func processAudioToRawPCM(audioFileURL: URL) async throws -> URL {
         // Create temporary file for raw PCM data
         let tempPCMURL = FileManager.default.temporaryDirectory
             .appendingPathComponent("audio_pcm_\(UUID().uuidString).raw")
@@ -92,6 +92,8 @@ internal class ParakeetService {
 
             return tempPCMURL
             
+        } catch is CancellationError {
+            throw CancellationError()
         } catch {
             throw ParakeetError.transcriptionFailed("Audio processing failed: \(error.localizedDescription)")
         }

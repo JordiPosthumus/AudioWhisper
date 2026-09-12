@@ -82,6 +82,24 @@ final class AudioProcessorTests: XCTestCase {
         }
     }
 
+    func testParakeetPCMPreparationPreservesCancellation() async throws {
+        let input = try makeTempAudioFile(samples: [0, 0.25, -0.25], sampleRate: 16_000)
+        defer { try? FileManager.default.removeItem(at: input) }
+        let task = Task {
+            withUnsafeCurrentTask { $0?.cancel() }
+            return try await ParakeetService().processAudioToRawPCM(audioFileURL: input)
+        }
+        do {
+            let output = try await task.value
+            try? FileManager.default.removeItem(at: output)
+            XCTFail("Expected cancellation during PCM preparation")
+        } catch is CancellationError {
+            // The recording UI recognizes this as a quiet cancellation.
+        } catch {
+            XCTFail("Cancellation must not become a transcription failure: \(error)")
+        }
+    }
+
     // MARK: - Helpers
 
     private func makeTempAudioFile(samples: [Float], sampleRate: Double) throws -> URL {
