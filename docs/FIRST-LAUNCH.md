@@ -31,7 +31,7 @@ Both the fresh runtime and the established runtime passed 57 preview updates acr
 
 These are local measurements on the development Mac, not latency guarantees for other hardware. The graphics path is unchanged by the rebrand; its existing full-panel benchmark is documented in [STREAMING.md](STREAMING.md).
 
-Final validation: 297 Swift tests passed and two opt-in/snapshot checks were skipped in the full suite; the clean-download integration passed separately. All 19 Python protocol, setup and loader checks passed. The universal release build passed. Existing final-inference, preview-decoding, runtime-manifest and runtime-bootstrap source files remain byte-for-byte unchanged; the loader change is limited to locating the cached snapshot.
+Final validation: 307 Swift tests passed and two opt-in/snapshot checks were skipped in the full suite; the clean-download integration passed separately. All 19 Python protocol, setup and loader checks passed. The universal release build passed. Existing final-inference, preview-decoding, runtime-manifest and runtime-bootstrap source files remain byte-for-byte unchanged; the loader change is limited to locating the cached snapshot.
 
 ## Stable signed resources
 
@@ -40,3 +40,9 @@ Release packaging precompiles Python 3.11 bytecode for all optimization levels b
 ## History isolation validation
 
 The final suite also exercises a healthy legacy history migration (including WAL entries), every stored field and icon, the timestamped backup, independent new saves, and an unrelated database that remains byte-for-byte unchanged. An opt-in recovery check opens a disposable copy through SwiftData, compares every transcript with SQLite, and verifies saving and reopening an additional entry. The production history now lives in its dedicated support-folder file.
+
+## Launch at login
+
+Version 210.15 offers an optional Start at Login switch after setup completes, also available in Preferences. A new installation stays off until the user opts in. Opening or upgrading the app does not register or unregister a login item, so existing macOS choices survive even if the old preference was never explicitly saved. Both views read the actual SMAppService status and refresh when the app or window becomes active. Pending approval remains visibly off with Open Login Settings and Cancel Request actions. Errors keep the effective toggle position and do not save an unconfirmed preference. Tests cover opt-in, existing registrations, changes in macOS, failure, approval, cancellation, and overlapping clicks.
+
+![Optional launch at login after setup](images/setup-ready.png)

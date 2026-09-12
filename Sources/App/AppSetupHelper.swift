@@ -1,5 +1,4 @@
 import Foundation
-import ServiceManagement
 import AppKit
 import os.log
 
@@ -9,23 +8,7 @@ internal class AppSetupHelper {
         if Thread.isMainThread && NSApplication.shared.delegate != nil {
             NSApplication.shared.setActivationPolicy(.accessory)
         }
-        setupLoginItem()
         cleanupOldTemporaryFiles()
-    }
-    
-    static func setupLoginItem() {
-        let startAtLogin = UserDefaults.standard.object(forKey: "startAtLogin") as? Bool ?? true // Default to true
-        
-        if startAtLogin {
-            // Only try to register if we're in a real app context, not in tests
-            if Bundle.main.bundleIdentifier != nil && !isRunningInTests() {
-                try? SMAppService.mainApp.register()
-            }
-        }
-    }
-    
-    private static func isRunningInTests() -> Bool {
-        return NSClassFromString("XCTestCase") != nil
     }
     
     static func createMenuBarIcon() -> NSImage {

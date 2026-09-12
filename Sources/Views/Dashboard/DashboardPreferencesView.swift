@@ -1,9 +1,6 @@
 import SwiftUI
-import ServiceManagement
-import os.log
 
 internal struct DashboardPreferencesView: View {
-    @AppStorage("startAtLogin") private var startAtLogin = true
     @AppStorage("immediateRecording") private var immediateRecording = false
     @AppStorage(AppDefaults.Keys.transcriptionStreaming) private var transcriptionStreaming = true
     @AppStorage("autoBoostMicrophoneVolume") private var autoBoostMicrophoneVolume = false
@@ -11,7 +8,6 @@ internal struct DashboardPreferencesView: View {
     @AppStorage("transcriptionHistoryEnabled") private var transcriptionHistoryEnabled = false
     @AppStorage("transcriptionRetentionPeriod") private var transcriptionRetentionPeriodRaw = RetentionPeriod.oneMonth.rawValue
 
-    @State private var loginItemError: String?
 
 
     private var retentionBinding: Binding<RetentionPeriod> {
@@ -24,17 +20,7 @@ internal struct DashboardPreferencesView: View {
     var body: some View {
         Form {
             Section("General") {
-                Toggle(isOn: $startAtLogin) {
-                    VStack(alignment: .leading, spacing: 2) {
-                        Text("Start at Login")
-                        Text("Launch ScribeKitt when you sign in.")
-                            .font(.caption)
-                            .foregroundStyle(.secondary)
-                    }
-                }
-                .onChange(of: startAtLogin) { _, newValue in
-                    updateLoginItem(enabled: newValue)
-                }
+                LoginItemControlView()
 
                 Toggle(isOn: $immediateRecording) {
                     VStack(alignment: .leading, spacing: 2) {
@@ -74,10 +60,6 @@ internal struct DashboardPreferencesView: View {
                     }
                 }
 
-                if let loginItemError {
-                    Text(loginItemError)
-                        .foregroundStyle(Color(nsColor: .systemRed))
-                }
             }
 
             Section {
@@ -122,19 +104,7 @@ internal struct DashboardPreferencesView: View {
         .formStyle(.grouped)
     }
 
-    private func updateLoginItem(enabled: Bool) {
-        do {
-            if enabled {
-                try SMAppService.mainApp.register()
-            } else {
-                try SMAppService.mainApp.unregister()
-            }
-            loginItemError = nil
-        } catch {
-            Logger.settings.error("Failed to update login item: \(error.localizedDescription)")
-            loginItemError = "Couldn't update login item: \(error.localizedDescription)"
-        }
-    }
+
 }
 
 #Preview {

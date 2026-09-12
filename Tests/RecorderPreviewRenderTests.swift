@@ -18,7 +18,17 @@ final class RecorderPreviewRenderTests: XCTestCase {
             runtime: { throw URLError(.notConnectedToInternet) })
         await failed.prepare()
         for (name, setup) in [("setup", waiting), ("setup-ready", ready), ("setup-error", failed)] {
-            let view = LocalSetupView(setup: setup, onContinue: {})
+            let loginItems = LoginItemManager(readStatus: { .notRegistered }, register: {}, unregister: {}, openSettings: {})
+            let view = LocalSetupView(setup: setup, loginItems: loginItems, onContinue: {})
+            let host = NSHostingView(rootView: view)
+            try render(view, to: directory.appendingPathComponent(name + ".png"), size: host.fittingSize)
+        }
+        let approval = LoginItemManager(readStatus: { .requiresApproval }, register: {}, unregister: {}, openSettings: {})
+        let failure = LoginItemManager(readStatus: { .enabled }, register: {},
+            unregister: { throw CocoaError(.fileWriteNoPermission) }, openSettings: {})
+        await failure.setEnabled(false)
+        for (name, loginItems) in [("setup-login-approval", approval), ("setup-login-error", failure)] {
+            let view = LocalSetupView(setup: ready, loginItems: loginItems, onContinue: {})
             let host = NSHostingView(rootView: view)
             try render(view, to: directory.appendingPathComponent(name + ".png"), size: host.fittingSize)
         }

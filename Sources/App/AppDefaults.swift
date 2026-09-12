@@ -41,7 +41,7 @@ internal enum AppDefaults {
             Keys.selectedParakeetModel: defaultParakeetModel.rawValue,
 
 
-            Keys.startAtLogin: true,
+            Keys.startAtLogin: false,
             Keys.playCompletionSound: true,
             Keys.transcriptionHistoryEnabled: false,
             Keys.transcriptionRetentionPeriod: RetentionPeriod.oneMonth.rawValue,

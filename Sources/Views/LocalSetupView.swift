@@ -3,6 +3,7 @@ import SwiftUI
 
 internal struct LocalSetupView: View {
     @ObservedObject var setup: LocalSetupManager
+    var loginItems: LoginItemManager = .shared
     var onContinue: () -> Void
     var onResize: @MainActor (CGSize) -> Void = { _ in }
 
@@ -40,6 +41,12 @@ internal struct LocalSetupView: View {
             }
             .padding(20)
             .background(.white.opacity(0.045), in: RoundedRectangle(cornerRadius: 16))
+
+            if setup.isReady {
+                LoginItemControlView(manager: loginItems)
+                    .toggleStyle(.switch)
+                    .font(.system(size: 14))
+            }
 
             if case .failed(let message) = setup.state {
                 VStack(alignment: .leading, spacing: 8) {
