@@ -1,4 +1,4 @@
-"""Model loading and caching utilities for Parakeet MLX and mlx-lm."""
+"""Model loading and caching utilities for Parakeet MLX."""
 
 from __future__ import annotations
 
@@ -50,28 +50,4 @@ def load_parakeet_model(repo: str):
 
     MODEL_CACHE[cache_key] = model
     return model
-
-
-def load_correction_model(repo: str):
-    cache_key = ("mlx", repo)
-    if cache_key in MODEL_CACHE:
-        return MODEL_CACHE[cache_key]
-
-    try:
-        from mlx_lm import load
-    except Exception as exc:
-        raise RuntimeError(f"mlx-lm import failed: {exc}") from exc
-
-    previous = _set_offline_env()
-    try:
-        model, tokenizer = load(repo)
-    except Exception as exc:
-        _restore_env(previous)
-        raise RuntimeError(
-            "MLX model not available offline. Please open Settings to download it."
-        ) from exc
-    _restore_env(previous)
-
-    MODEL_CACHE[cache_key] = (model, tokenizer)
-    return MODEL_CACHE[cache_key]
 

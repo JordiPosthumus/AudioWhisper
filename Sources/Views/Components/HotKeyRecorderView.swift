@@ -11,7 +11,7 @@ internal struct HotKeyRecorderView: View {
     @State private var displayText = "Press keys..."
     @State private var eventMonitor: Any?
     
-    private var accentColor: Color { DashboardTheme.accent }
+    private var accentColor: Color { Color.accentColor }
     
     var body: some View {
         HStack {

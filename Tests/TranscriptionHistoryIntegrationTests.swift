@@ -550,9 +550,6 @@ final class TranscriptionHistoryIntegrationTests: XCTestCase {
             
             // Test computed properties
             XCTAssertEqual(savedRecord.transcriptionProvider, provider, "Provider enum should work")
-            if let model = model {
-                XCTAssertEqual(savedRecord.whisperModel?.rawValue, model, "Whisper model enum should work")
-            }
             
             // Clean up for next iteration
             modelContext.delete(savedRecord)

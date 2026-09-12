@@ -264,21 +264,17 @@ internal final class DataManager: DataManagerProtocol {
         do {
             let context = ModelContext(container)
             let ids = Set(records.map(\.id))
-            // One fetch, transaction and metrics rebuild for the entire selection.
+            // One fetch and transaction for the entire selection.
             let allRecords = try context.fetch(FetchDescriptor<TranscriptionRecord>())
-            var remaining: [TranscriptionRecord] = []
             var deletedCount = 0
             for record in allRecords {
                 if ids.contains(record.id) {
                     context.delete(record)
                     deletedCount += 1
-                } else {
-                    remaining.append(record)
                 }
             }
             guard deletedCount > 0 else { return }
             try context.save()
-            UsageMetricsStore.shared.rebuild(using: remaining)
             Logger.dataManager.info("Deleted \(deletedCount) transcription records")
         } catch {
             Logger.dataManager.error("Failed to delete transcription records: \(error.localizedDescription)")
@@ -304,9 +300,6 @@ internal final class DataManager: DataManagerProtocol {
             
             Logger.dataManager.info("Deleted all \(records.count) transcription records")
             
-            // Reset usage metrics and source stats since all records are gone
-            UsageMetricsStore.shared.reset()
-            SourceUsageStore.shared.reset()
             
         } catch {
             Logger.dataManager.error("Failed to delete all transcription records: \(error.localizedDescription)")
@@ -432,8 +425,6 @@ internal final class MockDataManager: DataManagerProtocol {
         
         Logger.dataManager.info("Mock deleted transcription record with ID: \(record.id)")
         
-        // Rebuild usage metrics from remaining records
-        UsageMetricsStore.shared.rebuild(using: records)
     }
     
     func deleteAllRecords() async throws {
@@ -441,9 +432,6 @@ internal final class MockDataManager: DataManagerProtocol {
         records.removeAll()
         Logger.dataManager.info("Mock deleted all \(count) transcription records")
         
-        // Reset usage metrics and source stats since all records are gone
-        UsageMetricsStore.shared.reset()
-        SourceUsageStore.shared.reset()
     }
     
     func cleanupExpiredRecords() async throws {

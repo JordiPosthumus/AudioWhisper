@@ -21,7 +21,6 @@ internal extension AppDelegate {
             // App continues with in-memory fallback
         }
 
-        Task { await UsageMetricsStore.shared.bootstrapIfNeeded() }
 
         AppSetupHelper.setupApp()
 
@@ -50,11 +49,6 @@ internal extension AppDelegate {
 
         setupNotificationObservers()
 
-        DispatchQueue.main.asyncAfter(deadline: .now() + 1.0) {
-            if AppSetupHelper.checkFirstRun() {
-                self.showWelcomeAndSettings()
-            }
-        }
     }
 
     func applicationShouldTerminateAfterLastWindowClosed(_ sender: NSApplication) -> Bool {
@@ -72,15 +66,4 @@ internal extension AppDelegate {
         AppSetupHelper.cleanupOldTemporaryFiles()
     }
 
-    func hasAPIKey(service: String, account: String) -> Bool {
-        KeychainService.shared.getQuietly(service: service, account: account) != nil
-    }
-
-    func showWelcomeAndSettings() {
-        let shouldOpenSettings = WelcomeWindow.showWelcomeDialog()
-
-        if shouldOpenSettings {
-            DashboardWindowManager.shared.showDashboardWindow()
-        }
-    }
 }

@@ -21,7 +21,7 @@ internal struct AudioWhisperApp: App {
         .windowResizability(.contentSize)
         .commands {
             CommandGroup(replacing: .appSettings) {
-                Button("Dashboard...") {
+                Button("Settings...") {
                     DashboardWindowManager.shared.showDashboardWindow()
                 }
                 .keyboardShortcut(",", modifiers: .command)

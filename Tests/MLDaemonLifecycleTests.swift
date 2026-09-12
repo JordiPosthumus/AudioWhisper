@@ -31,7 +31,7 @@ final class MLDaemonLifecycleTests: XCTestCase {
 
     func testCancelledRequestReleasesCallerAndKeepsDaemonAlive() async throws {
         let (manager, script) = try await makeManager()
-        let request = Task { try await manager.correct(repo: "test", text: "hello", prompt: nil) }
+        let request = Task { try await manager.transcribe(repo: "test", pcmPath: "/tmp/audio.pcm") }
         let pending = await waitUntil { await manager.pendingRequestCountForTesting == 1 }
         XCTAssertTrue(pending)
         let pid = await manager.processIdentifierForTesting
@@ -53,7 +53,7 @@ final class MLDaemonLifecycleTests: XCTestCase {
     func testCancellationRemainsResponsiveWhenDaemonStdinIsFull() async throws {
         let (manager, script) = try await makeManager()
         let release = FileManager.default.temporaryDirectory.appendingPathComponent(UUID().uuidString)
-        let blocked = Task { try await manager.correct(repo: "blocked", text: release.path, prompt: nil) }
+        let blocked = Task { try await manager.transcribe(repo: "blocked", pcmPath: release.path) }
         let pending = await waitUntil { await manager.pendingRequestCountForTesting == 1 }
         XCTAssertTrue(pending)
         // Always release the fake daemon, including when a regression blocks its stdin writer.
@@ -61,7 +61,7 @@ final class MLDaemonLifecycleTests: XCTestCase {
             try? await Task.sleep(for: .seconds(1))
             FileManager.default.createFile(atPath: release.path, contents: Data())
         }
-        let request = Task { try await manager.correct(repo: "test", text: String(repeating: "x", count: 1_000_000), prompt: nil) }
+        let request = Task { try await manager.transcribe(repo: "test", pcmPath: String(repeating: "x", count: 1_000_000)) }
         try await Task.sleep(for: .milliseconds(50))
         let cancelled = expectation(description: "Cancellation does not wait for the blocked pipe")
         request.cancel()
@@ -107,9 +107,9 @@ final class MLDaemonLifecycleTests: XCTestCase {
             if r.get('params', {}).get('repo') == 'crash':
                 os._exit(7)
             if r.get('params', {}).get('repo') == 'blocked':
-                while not os.path.exists(r['params']['text']):
+                while not os.path.exists(r['params']['pcm_path']):
                     time.sleep(0.01)
-            if r['method'] == 'correct':
+            if r['method'] == 'transcribe':
                 time.sleep(0.15)
                 result = {'success': True, 'text': 'hello'}
             else:

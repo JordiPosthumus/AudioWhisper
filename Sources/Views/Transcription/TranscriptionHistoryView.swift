@@ -118,16 +118,6 @@ internal struct TranscriptionHistoryView: View {
                             .lineLimit(1)
                     }
 
-                    TableColumn("Provider") { record in
-                        Text(record.transcriptionProvider?.displayName ?? record.provider)
-                            .lineLimit(1)
-                    }
-
-                    TableColumn("Duration") { record in
-                        Text(record.formattedDuration ?? "—")
-                            .lineLimit(1)
-                    }
-
                     TableColumn("Text") { record in
                         Text(record.preview)
                             .lineLimit(1)
@@ -146,7 +136,7 @@ internal struct TranscriptionHistoryView: View {
                 ContentUnavailableView(
                     "Select a Transcript",
                     systemImage: "doc.text",
-                    description: Text("Choose a transcription on the left to view details.")
+                    description: Text("Choose a transcription above to read and copy it.")
                 )
                 .frame(maxWidth: .infinity, maxHeight: .infinity)
             }
@@ -238,63 +228,12 @@ private struct TranscriptionDetailView: View {
     let record: TranscriptionRecord
 
     var body: some View {
-        HStack(alignment: .top, spacing: 0) {
-            details
-                .frame(minWidth: 260, idealWidth: 320, maxWidth: 360, alignment: .topLeading)
+        ScrollView {
+            Text(record.text)
+                .textSelection(.enabled)
+                .frame(maxWidth: .infinity, alignment: .leading)
                 .padding(12)
-
-            Divider()
-
-            ScrollView {
-                Text(record.text)
-                    .textSelection(.enabled)
-                    .frame(maxWidth: .infinity, alignment: .leading)
-                    .padding(12)
-            }
         }
-    }
-
-    private var details: some View {
-        VStack(alignment: .leading, spacing: 10) {
-            LabeledContent("Date") {
-                Text(record.formattedDate)
-            }
-
-            LabeledContent("Provider") {
-                Text(record.transcriptionProvider?.displayName ?? record.provider)
-            }
-
-            if let duration = record.formattedDuration {
-                LabeledContent("Duration") {
-                    Text(duration)
-                }
-            }
-
-            if let modelUsed = record.modelUsed, !modelUsed.isEmpty {
-                LabeledContent("Model") {
-                    Text(modelUsed)
-                }
-            }
-
-            if let source = record.sourceAppName, !source.isEmpty {
-                LabeledContent("Source App") {
-                    Text(source)
-                }
-            }
-
-            if record.wordCount > 0 {
-                LabeledContent("Words") {
-                    Text("\(record.wordCount)")
-                }
-            }
-
-            if let wpm = record.wordsPerMinute {
-                LabeledContent("WPM") {
-                    Text(wpm.formatted(.number.precision(.fractionLength(0))))
-                }
-            }
-        }
-        .font(.callout)
     }
 }
 

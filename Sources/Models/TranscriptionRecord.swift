@@ -53,12 +53,6 @@ internal extension TranscriptionRecord {
         return TranscriptionProvider(rawValue: provider)
     }
     
-    /// Returns the WhisperModel if applicable (for local transcriptions)
-    var whisperModel: WhisperModel? {
-        guard let modelUsed = modelUsed else { return nil }
-        return WhisperModel(rawValue: modelUsed)
-    }
-    
     /// Returns a formatted date string for display
     var formattedDate: String {
         return Self.displayDateFormatter.string(from: date)

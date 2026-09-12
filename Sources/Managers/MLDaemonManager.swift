@@ -67,15 +67,6 @@ internal actor MLDaemonManager {
         return result.text
     }
 
-    func correct(repo: String, text: String, prompt: String?) async throws -> String {
-        struct CorrectionResult: Decodable { let success: Bool; let text: String; let error: String? }
-        var params: [String: Any] = ["repo": repo, "text": text]
-        if let prompt = prompt { params["prompt"] = prompt }
-        let result: CorrectionResult = try await sendRequest(method: "correct", params: params)
-        guard result.success else { throw MLDaemonError.remoteError(result.error ?? "Correction failed") }
-        return result.text
-    }
-
     func warmup(type: String, repo: String) async throws {
         struct WarmupResult: Decodable { let success: Bool; let error: String? }
         let result: WarmupResult = try await sendRequest(method: "warmup", params: ["type": type, "repo": repo])

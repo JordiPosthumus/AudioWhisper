@@ -4,7 +4,7 @@ import SwiftData
 
 @MainActor
 final class HistoryBatchDeletionTests: XCTestCase {
-    func testBatchDeletionPersistsOnlySelectedIDsAndRebuildsMetrics() async throws {
+    func testBatchDeletionPersistsOnlySelectedIDs() async throws {
         let container = try ModelContainer(for: TranscriptionRecord.self,
             configurations: ModelConfiguration(isStoredInMemoryOnly: true))
         let context = ModelContext(container)
@@ -17,8 +17,6 @@ final class HistoryBatchDeletionTests: XCTestCase {
         try await manager.deleteRecords(selection + [records[0], TranscriptionRecord(text: "absent", provider: .local)])
         let remaining = try await manager.fetchAllRecords()
         XCTAssertEqual(Set(remaining.map(\.id)), Set(records.suffix(20).map(\.id)))
-        XCTAssertEqual(UsageMetricsStore.shared.snapshot.totalSessions, 20)
-        XCTAssertEqual(UsageMetricsStore.shared.snapshot.totalWords, 40)
         try await manager.deleteRecords([])
         let unchanged = try await manager.fetchAllRecords()
         XCTAssertEqual(unchanged.count, 20)

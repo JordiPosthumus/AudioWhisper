@@ -5,24 +5,15 @@ import Foundation
 class ParakeetServiceTests: XCTestCase {
     
     var parakeetService: ParakeetService!
-    var originalRepo: String?
-    
     override func setUp() {
         super.setUp()
-        originalRepo = UserDefaults.standard.string(forKey: "selectedParakeetModel")
-        parakeetService = ParakeetService()
+        parakeetService = ParakeetService(cacheRoot: FileManager.default.temporaryDirectory.appendingPathComponent(UUID().uuidString))
     }
-    
     override func tearDown() {
-        if let originalRepo {
-            UserDefaults.standard.set(originalRepo, forKey: "selectedParakeetModel")
-        } else {
-            UserDefaults.standard.removeObject(forKey: "selectedParakeetModel")
-        }
         parakeetService = nil
         super.tearDown()
     }
-    
+
     // MARK: - Initialization Tests
     
     func testParakeetServiceInitialization() {
@@ -43,15 +34,13 @@ class ParakeetServiceTests: XCTestCase {
         XCTAssertEqual(scriptNotFoundError.errorDescription, "Parakeet transcription script not found in app bundle")
         XCTAssertEqual(transcriptionFailedError.errorDescription, "Parakeet transcription failed: Test error")
         XCTAssertEqual(invalidResponseError.errorDescription, "Invalid response from Parakeet: Invalid JSON")
-        XCTAssertTrue(dependencyMissingError.errorDescription!.contains("uv"))
+        XCTAssertTrue(dependencyMissingError.errorDescription!.contains("Python runtime"))
         XCTAssertTrue(timeoutError.errorDescription!.contains("30.0 seconds"))
     }
     
     // MARK: - Validation Tests
     
     func testValidateSetupRequiresCachedModel() async {
-        let missingRepo = "example.com/missing-repo-\(UUID().uuidString)"
-        UserDefaults.standard.set(missingRepo, forKey: "selectedParakeetModel")
         
         do {
             try await parakeetService.validateSetup(pythonPath: "/usr/bin/python3")
@@ -100,8 +89,6 @@ class ParakeetServiceTests: XCTestCase {
     // MARK: - File Path Tests
     
     func testTranscribeRequiresCachedModel() async {
-        let missingRepo = "example.com/missing-repo-\(UUID().uuidString)"
-        UserDefaults.standard.set(missingRepo, forKey: "selectedParakeetModel")
         let testAudioURL = URL(fileURLWithPath: "/tmp/test.m4a")
         
         do {

@@ -290,26 +290,26 @@ final class TranscriptionHistoryViewTests: XCTestCase {
         }
     }
     
-    func testWhisperModelFromRecord() {
+    func testLegacyModelFromRecord() {
         // Given
         let record = createSampleRecord(modelUsed: "base")
         
         // When
-        let whisperModel = record.whisperModel
+        let model = record.modelUsed
         
         // Then
-        XCTAssertEqual(whisperModel, .base)
+        XCTAssertEqual(model, "base")
     }
     
-    func testWhisperModelWithNilModelUsed() {
+    func testNilLegacyModel() {
         // Given
         let record = createSampleRecord(modelUsed: nil)
         
         // When
-        let whisperModel = record.whisperModel
+        let model = record.modelUsed
         
         // Then
-        XCTAssertNil(whisperModel)
+        XCTAssertNil(model)
     }
     
     // MARK: - Edge Cases

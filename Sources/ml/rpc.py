@@ -7,8 +7,7 @@ import sys
 from contextlib import redirect_stdout
 from typing import Any, Dict
 
-from .correction import correct
-from .loader import load_correction_model, load_parakeet_model
+from .loader import load_parakeet_model
 from .parakeet import DEFAULT_PARAKEET_REPO, transcribe
 
 
@@ -26,14 +25,6 @@ def _execute(method: str, params: Dict[str, Any]) -> Dict[str, Any]:
         if not pcm_path:
             raise ValueError("pcm_path is required for transcribe")
         return transcribe(repo, pcm_path)
-    if method == "correct":
-        repo = params.get("repo")
-        text = params.get("text")
-        if not repo:
-            raise ValueError("repo is required for correct")
-        if text is None:
-            raise ValueError("text is required for correct")
-        return correct(repo, text, params.get("prompt"))
     if method == "warmup":
         warm_type = params.get("type")
         repo = params.get("repo")
@@ -41,8 +32,6 @@ def _execute(method: str, params: Dict[str, Any]) -> Dict[str, Any]:
             raise ValueError("warmup requires 'type' and 'repo'")
         if warm_type == "parakeet":
             load_parakeet_model(repo)
-        elif warm_type in ("mlx", "correction"):
-            load_correction_model(repo)
         else:
             raise ValueError(f"Unknown warmup type: {warm_type}")
         return {"success": True}

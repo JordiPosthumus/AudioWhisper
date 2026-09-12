@@ -4,13 +4,11 @@ import HotKey
 import AppKit
 
 internal struct DashboardRecordingView: View {
-    @AppStorage("selectedMicrophone") private var selectedMicrophone = ""
     @AppStorage("globalHotkey") private var globalHotkey = "⌘⇧Space"
     @AppStorage("pressAndHoldEnabled") private var pressAndHoldEnabled = PressAndHoldConfiguration.defaults.enabled
     @AppStorage("pressAndHoldKeyIdentifier") private var pressAndHoldKeyIdentifier = PressAndHoldConfiguration.defaults.key.rawValue
     @AppStorage("pressAndHoldMode") private var pressAndHoldModeRaw = PressAndHoldConfiguration.defaults.mode.rawValue
 
-    @State private var availableMicrophones: [AVCaptureDevice] = []
     @State private var isRecordingHotkey = false
     @State private var recordedModifiers: NSEvent.ModifierFlags = []
     @State private var recordedKey: Key?
@@ -18,17 +16,11 @@ internal struct DashboardRecordingView: View {
     var body: some View {
         Form {
             Section {
-                if availableMicrophones.isEmpty {
-                    Text("No microphones detected. Plug in a microphone or check system permissions.")
-                        .foregroundStyle(.secondary)
-                } else {
-                    Picker("Input Device", selection: $selectedMicrophone) {
-                        Text("System Default").tag("")
-                        ForEach(availableMicrophones, id: \.uniqueID) { device in
-                            Text(device.localizedName).tag(device.uniqueID)
-                        }
+                LabeledContent("Input Device", value: "System Default")
+                Button("Choose Microphone in Sound Settings…") {
+                    if let url = URL(string: "x-apple.systempreferences:com.apple.preference.sound?input") {
+                        NSWorkspace.shared.open(url)
                     }
-                    .pickerStyle(.menu)
                 }
             } header: {
                 Text("Microphone")
@@ -107,16 +99,6 @@ internal struct DashboardRecordingView: View {
             }
         }
         .formStyle(.grouped)
-        .onAppear(perform: loadMicrophones)
-    }
-
-    private func loadMicrophones() {
-        let discoverySession = AVCaptureDevice.DiscoverySession(
-            deviceTypes: [.microphone],
-            mediaType: .audio,
-            position: .unspecified
-        )
-        availableMicrophones = discoverySession.devices
     }
 
     private func publishPressAndHoldConfiguration() {

@@ -10,11 +10,9 @@ internal struct DashboardPreferencesView: View {
     @AppStorage("playCompletionSound") private var playCompletionSound = true
     @AppStorage("transcriptionHistoryEnabled") private var transcriptionHistoryEnabled = false
     @AppStorage("transcriptionRetentionPeriod") private var transcriptionRetentionPeriodRaw = RetentionPeriod.oneMonth.rawValue
-    @AppStorage("maxModelStorageGB") private var maxModelStorageGB = 5.0
 
     @State private var loginItemError: String?
 
-    private let storageOptions: [Double] = [1, 2, 5, 10, 20]
 
     private var retentionBinding: Binding<RetentionPeriod> {
         Binding(
@@ -104,39 +102,13 @@ internal struct DashboardPreferencesView: View {
                 Text("View saved transcripts in the Transcripts section in the sidebar.")
             }
 
-            Section("Storage") {
-                Picker("Max Model Storage", selection: $maxModelStorageGB) {
-                    ForEach(storageOptions, id: \.self) { option in
-                        Text("\(Int(option)) GB").tag(option)
-                    }
-                }
-                .pickerStyle(.menu)
-            }
-
             Section("About") {
                 LabeledContent("Version") {
-                    Text(VersionInfo.fullVersionInfo)
+                    Text(VersionInfo.version)
                         .font(.system(.body, design: .monospaced))
                         .foregroundStyle(.secondary)
                 }
 
-                if VersionInfo.gitHash != "dev-build" && VersionInfo.gitHash != "unknown" {
-                    LabeledContent("Git") {
-                        Text(VersionInfo.gitHash)
-                            .font(.system(.body, design: .monospaced))
-                            .foregroundStyle(.secondary)
-                            .textSelection(.enabled)
-                    }
-                }
-
-                if !VersionInfo.buildDate.isEmpty {
-                    LabeledContent("Built") {
-                        Text(VersionInfo.buildDate)
-                            .font(.system(.body, design: .monospaced))
-                            .foregroundStyle(.secondary)
-                            .textSelection(.enabled)
-                    }
-                }
             }
         }
         .formStyle(.grouped)

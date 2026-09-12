@@ -94,10 +94,12 @@ fi
 
 # Build for release
 echo "📦 Building for release..."
-swift build -c release --arch arm64 --arch x86_64
+swift build -c release --arch arm64 --arch x86_64 || exit 1
 
-# Check for the actual binary instead of exit code (swift-collections emits spurious errors)
-if [ ! -f ".build/apple/Products/Release/AudioWhisper" ]; then
+RELEASE_DIR="$(swift build -c release --arch arm64 --arch x86_64 --show-bin-path)" || exit 1
+
+# Verify the release executable exists
+if [ ! -f "$RELEASE_DIR/AudioWhisper" ]; then
   echo "❌ Build failed - binary not found!"
   exit 1
 fi
@@ -112,36 +114,7 @@ mkdir -p AudioWhisper.app/Contents/Resources/bin
 BUILD_NUMBER="${VERSION//./}"
 
 # Copy executable (universal binary)
-cp .build/apple/Products/Release/AudioWhisper AudioWhisper.app/Contents/MacOS/
-
-# Copy dashboard logo
-if [ -f "Sources/Resources/DashboardLogo.jpg" ]; then
-  cp Sources/Resources/DashboardLogo.jpg AudioWhisper.app/Contents/Resources/
-  echo "Copied dashboard logo"
-fi
-
-# Copy Python scripts for Parakeet and MLX support
-if [ -f "Sources/parakeet_transcribe_pcm.py" ]; then
-  cp Sources/parakeet_transcribe_pcm.py AudioWhisper.app/Contents/Resources/
-  echo "Copied Parakeet PCM Python script"
-else
-  echo "⚠️ parakeet_transcribe_pcm.py not found, Parakeet functionality will not work"
-fi
-
-if [ -f "Sources/mlx_semantic_correct.py" ]; then
-  cp Sources/mlx_semantic_correct.py AudioWhisper.app/Contents/Resources/
-  echo "Copied MLX semantic correction Python script"
-else
-  echo "⚠️ mlx_semantic_correct.py not found, MLX semantic correction will not work"
-fi
-
-# Copy verify scripts
-if [ -f "Sources/verify_parakeet.py" ]; then
-  cp Sources/verify_parakeet.py AudioWhisper.app/Contents/Resources/
-fi
-if [ -f "Sources/verify_mlx.py" ]; then
-  cp Sources/verify_mlx.py AudioWhisper.app/Contents/Resources/
-fi
+cp "$RELEASE_DIR/AudioWhisper" AudioWhisper.app/Contents/MacOS/
 
 # Copy ML daemon entrypoint and package
 if [ -f "Sources/ml_daemon.py" ]; then
@@ -156,6 +129,9 @@ if [ -d "Sources/ml" ]; then
 else
   echo "⚠️ Sources/ml package not found, ML daemon will not work"
 fi
+
+# Include the SwiftPM resource bundle for Bundle.module lookups.
+cp -R "$RELEASE_DIR/AudioWhisper_AudioWhisper.bundle" AudioWhisper.app/Contents/Resources/ || exit 1
 
 # Bundle uv (Apple Silicon). Prefer repo copy; else fall back to system uv if available
 if [ -f "Sources/Resources/bin/uv" ]; then

@@ -14,7 +14,7 @@ internal enum ParakeetError: Error, LocalizedError, Equatable {
     var errorDescription: String? {
         switch self {
         case .pythonNotFound(let path):
-            return "Python runtime not available at: \(path)\n\nFix:\n• Open Settings ▸ Parakeet ▸ Install/Update Dependencies with uv"
+            return "Python runtime not available at: \(path)\n\nFix:\n• Open the existing AudioWhisper Python runtime"
         case .scriptNotFound:
             return "Parakeet transcription script not found in app bundle"
         case .transcriptionFailed(let message):
@@ -22,11 +22,11 @@ internal enum ParakeetError: Error, LocalizedError, Equatable {
         case .invalidResponse(let message):
             return "Invalid response from Parakeet: \(message)"
         case .dependencyMissing(let dependency, _):
-            return "\(dependency) is not installed\n\nFix: Open Settings ▸ Parakeet ▸ Install/Update Dependencies with uv"
+            return "\(dependency) is not installed\n\nFix: Open the existing AudioWhisper Python runtime"
         case .processTimedOut(let timeout):
             return "Transcription timed out after \(timeout) seconds\n\nTry with a shorter audio file or check system resources"
         case .modelNotReady:
-            return "Parakeet model not downloaded. Open Settings ▸ Parakeet to download it."
+            return "Parakeet v2 is not available in the local model cache. Restore the existing model installation before transcribing."
         }
     }
 }
@@ -40,6 +40,11 @@ internal struct ParakeetResponse: Codable {
 internal class ParakeetService {
     private let logger = Logger(subsystem: "com.audiowhisper.app", category: "ParakeetService")
     private let daemon = MLDaemonManager.shared
+    private let cacheRoot: URL
+
+    init(cacheRoot: URL = FileManager.default.homeDirectoryForCurrentUser.appendingPathComponent(".cache/huggingface/hub")) {
+        self.cacheRoot = cacheRoot
+    }
 
     func transcribe(audioFileURL: URL, pythonPath _: String? = nil) async throws -> String {
         // Step 0: Do not download here; just verify model cache exists
@@ -59,14 +64,13 @@ internal class ParakeetService {
     }
 
     private var selectedRepo: String {
-        UserDefaults.standard.string(forKey: "selectedParakeetModel") ?? ParakeetModel.v3Multilingual.rawValue
+        ParakeetModel.v2English.rawValue
     }
 
     private func isModelCached() -> Bool {
         let repo = selectedRepo
         let escaped = repo.replacingOccurrences(of: "/", with: "--")
-        let base = FileManager.default.homeDirectoryForCurrentUser
-            .appendingPathComponent(".cache/huggingface/hub/models--\(escaped)")
+        let base = cacheRoot.appendingPathComponent("models--\(escaped)")
         var isDir: ObjCBool = false
         guard FileManager.default.fileExists(atPath: base.path, isDirectory: &isDir), isDir.boolValue else { return false }
         let refsMain = base.appendingPathComponent("refs/main")

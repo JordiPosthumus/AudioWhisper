@@ -6,10 +6,6 @@ internal extension ContentView {
         audioRecorder.checkMicrophonePermission()
         setupNotificationObservers()
         permissionManager.checkPermissionState()
-        loadStoredTranscriptionProvider()
-        if transcriptionProvider == .local {
-            startWhisperModelDownloadIfNeeded(selectedWhisperModel)
-        }
         updateStatus()
     }
     
@@ -17,6 +13,7 @@ internal extension ContentView {
         removeNotificationObservers()
         processingTask?.cancel()
         processingTask = nil
+        activeTranscriptionID = nil
         lastAudioURL = nil
     }
     
@@ -108,9 +105,6 @@ internal extension ContentView {
             Task { @MainActor in
                 if let app = notification.object as? NSRunningApplication {
                     targetAppForPaste = app
-                    if let info = SourceAppInfo.from(app: app) {
-                        lastSourceAppInfo = info
-                    }
                 }
             }
         }
@@ -143,7 +137,7 @@ internal extension ContentView {
             object: nil,
             queue: .main
         ) { _ in
-            retryLastTranscription()
+            Task { @MainActor in retryLastTranscription() }
         }
         
         showAudioFileObserver = NotificationCenter.default.addObserver(
@@ -151,7 +145,7 @@ internal extension ContentView {
             object: nil,
             queue: .main
         ) { _ in
-            showLastAudioFile()
+            Task { @MainActor in showLastAudioFile() }
         }
         
         transcribeFileObserver = NotificationCenter.default.addObserver(
@@ -160,7 +154,7 @@ internal extension ContentView {
             queue: .main
         ) { notification in
             if let url = notification.object as? URL {
-                transcribeExternalAudioFile(url)
+                Task { @MainActor in transcribeExternalAudioFile(url) }
             }
         }
     }
@@ -185,10 +179,4 @@ internal extension ContentView {
         }
     }
     
-    private func loadStoredTranscriptionProvider() {
-        if let storedProvider = UserDefaults.standard.string(forKey: "transcriptionProvider"),
-           let provider = TranscriptionProvider(rawValue: storedProvider) {
-            transcriptionProvider = provider
-        }
-    }
 }

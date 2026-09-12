@@ -7,7 +7,7 @@ from typing import Any, Dict
 
 from .loader import load_parakeet_model
 
-DEFAULT_PARAKEET_REPO = "mlx-community/parakeet-tdt-0.6b-v3"
+DEFAULT_PARAKEET_REPO = "mlx-community/parakeet-tdt-0.6b-v2"
 
 
 def extract_parakeet_text(result: Any) -> str:

@@ -11,8 +11,6 @@ final class MLDaemonManagerTests: XCTestCase {
             switch method {
             case "transcribe":
                 return ["success": true, "text": "hello world", "error": NSNull()]
-            case "correct":
-                throw MLDaemonError.remoteError("remote boom")
             default:
                 return ["success": "invalid"]
             }
@@ -30,8 +28,9 @@ final class MLDaemonManagerTests: XCTestCase {
     }
 
     func testRemoteErrorIsPropagated() async throws {
+        await manager.setTestResponder { _, _ in throw MLDaemonError.remoteError("remote boom") }
         do {
-            _ = try await self.manager.correct(repo: "repo", text: "hi", prompt: nil)
+            _ = try await self.manager.transcribe(repo: "repo", pcmPath: "/tmp/audio.pcm")
             XCTFail("Expected remote error")
         } catch {
             guard case MLDaemonError.remoteError(let message) = error else {

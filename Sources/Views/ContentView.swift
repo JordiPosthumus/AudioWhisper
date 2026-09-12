@@ -3,16 +3,12 @@ import AVFoundation
 
 internal struct ContentView: View {
     @ObservedObject var audioRecorder: AudioRecorder
-    @AppStorage(AppDefaults.Keys.transcriptionProvider) var transcriptionProvider = AppDefaults.defaultTranscriptionProvider
-    @AppStorage(AppDefaults.Keys.selectedWhisperModel) var selectedWhisperModel = AppDefaults.defaultWhisperModel
     @AppStorage(AppDefaults.Keys.immediateRecording) var immediateRecording = false
-    @State var modelManager = ModelManager.shared
-    @State var speechService: SpeechToTextService
+    @State var parakeetService: ParakeetService
     @State var pasteManager = PasteManager()
     @State var statusViewModel = StatusViewModel()
     @State var permissionManager = PermissionManager()
     @StateObject var soundManager = SoundManager()
-    let semanticCorrectionService = SemanticCorrectionService()
     @State var isProcessing = false
     @State var progressMessage = "Processing..."
     @State var transcriptionStartTime: Date?
@@ -34,13 +30,11 @@ internal struct ContentView: View {
     @State var showAudioFileObserver: NSObjectProtocol?
     @State var transcribeFileObserver: NSObjectProtocol?
     @State var lastAudioURL: URL?
-    @State var awaitingSemanticPaste = false
-    @State var lastSourceAppInfo: SourceAppInfo?
-    @AppStorage("hasShownFirstModelUseHint") var hasShownFirstModelUseHint = false
-    @State var showFirstModelUseHint = false
     
-    init(speechService: SpeechToTextService = SpeechToTextService(), audioRecorder: AudioRecorder) {
-        self._speechService = State(initialValue: speechService)
+    @State var activeTranscriptionID: UUID?
+
+    init(parakeetService: ParakeetService = ParakeetService(), audioRecorder: AudioRecorder) {
+        self._parakeetService = State(initialValue: parakeetService)
         self.audioRecorder = audioRecorder
     }
     
@@ -108,24 +102,6 @@ internal struct ContentView: View {
             updateStatus()
         }
         .onChange(of: showSuccess) { _, _ in
-            updateStatus()
-        }
-        .onChange(of: transcriptionProvider) { _, _ in
-            if transcriptionProvider == .local {
-                startWhisperModelDownloadIfNeeded(selectedWhisperModel)
-            }
-            updateStatus()
-        }
-        .onChange(of: selectedWhisperModel) { _, _ in
-            if transcriptionProvider == .local {
-                startWhisperModelDownloadIfNeeded(selectedWhisperModel)
-            }
-            updateStatus()
-        }
-        .onChange(of: modelManager.downloadStages[selectedWhisperModel]?.displayText ?? "") { _, _ in
-            updateStatus()
-        }
-        .onChange(of: modelManager.downloadingModels.contains(selectedWhisperModel)) { _, _ in
             updateStatus()
         }
         .onChange(of: showError) { _, newValue in

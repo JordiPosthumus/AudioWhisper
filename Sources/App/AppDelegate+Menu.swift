@@ -8,9 +8,8 @@ internal extension AppDelegate {
         menu.addItem(NSMenuItem(title: LocalizedStrings.Menu.record, action: #selector(toggleRecordWindow), keyEquivalent: ""))
         menu.addItem(NSMenuItem(title: "Transcribe Audio File...", action: #selector(transcribeAudioFile), keyEquivalent: ""))
         menu.addItem(NSMenuItem.separator())
-        menu.addItem(NSMenuItem(title: "Dashboard...", action: #selector(showDashboard), keyEquivalent: ""))
+        menu.addItem(NSMenuItem(title: "History...", action: #selector(showDashboard), keyEquivalent: ""))
         menu.addItem(NSMenuItem(title: "Settings...", action: #selector(showSettings), keyEquivalent: ","))
-        menu.addItem(NSMenuItem(title: "Help", action: #selector(showHelp), keyEquivalent: ""))
         menu.addItem(NSMenuItem.separator())
         menu.addItem(NSMenuItem(title: LocalizedStrings.Menu.quit, action: #selector(NSApplication.terminate(_:)), keyEquivalent: ""))
         return menu
@@ -18,20 +17,12 @@ internal extension AppDelegate {
 
     @MainActor @objc func showDashboard() {
         Logger.app.info("Dashboard menu item selected")
-        DashboardWindowManager.shared.showDashboardWindow()
+        DashboardWindowManager.shared.showDashboardWindow(selectedNav: .transcripts)
     }
 
     @MainActor @objc func showSettings() {
         Logger.app.info("Settings menu item selected")
         DashboardWindowManager.shared.showDashboardWindow(selectedNav: .preferences)
-    }
-
-    @objc func showHelp() {
-        let shouldOpenSettings = WelcomeWindow.showWelcomeDialog()
-
-        if shouldOpenSettings {
-            DashboardWindowManager.shared.showDashboardWindow()
-        }
     }
 
     @objc func transcribeAudioFile() {

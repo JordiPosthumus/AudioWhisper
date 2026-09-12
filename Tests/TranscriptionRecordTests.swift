@@ -34,20 +34,15 @@ final class TranscriptionRecordTests: XCTestCase {
         }
     }
     
-    func testTranscriptionRecordWithWhisperModels() {
-        // Test that all WhisperModel cases work
-        for model in WhisperModel.allCases {
-            let record = TranscriptionRecord(
-                text: "Test transcription",
-                provider: .local,
-                modelUsed: model.rawValue
-            )
-            
-            XCTAssertEqual(record.modelUsed, model.rawValue)
-            XCTAssertEqual(record.whisperModel, model)
+    func testLegacyModelMetadataRemainsReadable() {
+        for model in ["tiny", "base", "small", "large-v3-turbo"] {
+            let record = TranscriptionRecord(text: "Old transcript", provider: .local, modelUsed: model)
+            XCTAssertEqual(record.modelUsed, model)
+            XCTAssertEqual(record.provider, "local")
+            XCTAssertTrue(record.matches(searchQuery: model))
         }
     }
-    
+
     func testFormattedDateIsNotEmpty() {
         let record = TranscriptionRecord(
             text: "Test",
@@ -152,28 +147,4 @@ final class TranscriptionRecordTests: XCTestCase {
         XCTAssertNil(invalidRecord.transcriptionProvider)
     }
     
-    func testWhisperModelComputed() {
-        // Test valid model
-        let validRecord = TranscriptionRecord(
-            text: "Test",
-            provider: .local,
-            modelUsed: WhisperModel.small.rawValue
-        )
-        XCTAssertEqual(validRecord.whisperModel, .small)
-        
-        // Test invalid model (should return nil)
-        let invalidRecord = TranscriptionRecord(
-            text: "Test",
-            provider: .local,
-            modelUsed: "invalid_model"
-        )
-        XCTAssertNil(invalidRecord.whisperModel)
-        
-        // Test no model (should return nil)
-        let noModelRecord = TranscriptionRecord(
-            text: "Test",
-            provider: .openai
-        )
-        XCTAssertNil(noModelRecord.whisperModel)
-    }
 }
