@@ -13,6 +13,15 @@ final class RecorderPreviewRenderTests: XCTestCase {
         let directory = URL(fileURLWithPath: destination, isDirectory: true)
         try FileManager.default.createDirectory(at: directory, withIntermediateDirectories: true)
         let meter = RecorderMeterFixture()
+        let showcaseStable = "Capture the thought while it’s still fresh. Speak naturally, watch your words appear, and keep your attention on what you want to say.\n\n"
+        let showcaseDraft = "Your voice stays on your Mac. When you’re finished, the complete transcript is ready to paste wherever you’re working."
+        try render(FloatingRecorderView(status: .recording, audioLevel: 0.68,
+            recordingStartedAt: Date().addingTimeInterval(-18),
+            waveformSamples: (0..<48).map { Float(0.48 + sin(Double($0) * 0.32) * 0.20) },
+            stableText: showcaseStable, draftText: showcaseDraft, streaming: true,
+            onPrimaryAction: {}, onDismiss: {}),
+            to: directory.appendingPathComponent("showcase.png"),
+            size: TranscriptPresentation.size(finalText: nil, live: true, liveText: showcaseStable + showcaseDraft))
         try render(RecorderStreamingFixture(meter: meter), to: directory.appendingPathComponent("streaming.png"),
                    size: TranscriptPresentation.size(finalText: nil, live: true), meter: meter)
         let processing = FloatingRecorderView(status: .processing("Transcribing"), audioLevel: 0, recordingStartedAt: nil,

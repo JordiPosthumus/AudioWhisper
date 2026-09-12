@@ -4,6 +4,9 @@
 
 A small, local macOS dictation app: watch your words appear while you speak, then paste with ⌘V.
 
+<p align="center"><img src="docs/images/showcase.png" width="960" alt="Native macOS dictation panel with a red KITT-style voice display, status indicators, and a live transcript"></p>
+<p align="center"><em>The native recorder interface with sample text. Live words appear beside the voice display; the panel expands for longer dictations.</em></p>
+
 **Built on [AudioWhisper by mazdak and contributors](https://github.com/mazdak/AudioWhisper).** The original [MIT license](LICENSE) is preserved. See [Credits](CREDITS.md).
 
 ## Daily use
