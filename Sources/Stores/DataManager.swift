@@ -73,6 +73,7 @@ internal protocol DataManagerProtocol {
     func fetchRecords(matching searchQuery: String) async throws -> [TranscriptionRecord]
     func fetchRecords(matching searchQuery: String, limit: Int?, offset: Int?) async throws -> [TranscriptionRecord]
     func deleteRecord(_ record: TranscriptionRecord) async throws
+    func deleteRecords(_ records: [TranscriptionRecord]) async throws
     func deleteAllRecords() async throws
     func cleanupExpiredRecords() async throws
     
@@ -82,34 +83,44 @@ internal protocol DataManagerProtocol {
     func cleanupExpiredRecordsQuietly() async
 }
 
+internal extension DataManagerProtocol {
+    func deleteRecords(_ records: [TranscriptionRecord]) async throws {
+        for record in records { try await deleteRecord(record) }
+    }
+}
+
 @MainActor
 internal final class DataManager: DataManagerProtocol {
     nonisolated(unsafe) static let shared: DataManagerProtocol = MainActor.assumeIsolated {
         DataManager()
     }
     
+    private let defaults: UserDefaults
     private var modelContainer: ModelContainer?
     
+    init(modelContainer: ModelContainer? = nil, defaults: UserDefaults = .standard) {
+        self.defaults = defaults
+        self.modelContainer = modelContainer
+    }
+
     /// Public accessor for the model container, primarily for SwiftUI integration
     var sharedModelContainer: ModelContainer? {
         return modelContainer
     }
     
     var isHistoryEnabled: Bool {
-        return UserDefaults.standard.bool(forKey: "transcriptionHistoryEnabled")
+        return defaults.bool(forKey: "transcriptionHistoryEnabled")
     }
     
     var retentionPeriod: RetentionPeriod {
         get {
-            let rawValue = UserDefaults.standard.string(forKey: "transcriptionRetentionPeriod") ?? RetentionPeriod.oneMonth.rawValue
+            let rawValue = defaults.string(forKey: "transcriptionRetentionPeriod") ?? RetentionPeriod.oneMonth.rawValue
             return RetentionPeriod(rawValue: rawValue) ?? .oneMonth
         }
         set {
-            UserDefaults.standard.set(newValue.rawValue, forKey: "transcriptionRetentionPeriod")
+            defaults.set(newValue.rawValue, forKey: "transcriptionRetentionPeriod")
         }
     }
-    
-    private init() {}
     
     func initialize() throws {
         do {
@@ -242,35 +253,39 @@ internal final class DataManager: DataManagerProtocol {
     }
     
     func deleteRecord(_ record: TranscriptionRecord) async throws {
+        try await deleteRecords([record])
+    }
+
+    func deleteRecords(_ records: [TranscriptionRecord]) async throws {
+        guard !records.isEmpty else { return }
         guard let container = modelContainer else {
             throw DataManagerError.modelContainerUnavailable
         }
-        
         do {
             let context = ModelContext(container)
-            
-            // Find the record in the context by fetching all and filtering
+            let ids = Set(records.map(\.id))
+            // One fetch, transaction and metrics rebuild for the entire selection.
             let allRecords = try context.fetch(FetchDescriptor<TranscriptionRecord>())
-            guard let recordToDelete = allRecords.first(where: { $0.id == record.id }) else {
-                Logger.dataManager.warning("Record with ID \(record.id) not found for deletion")
-                return
+            var remaining: [TranscriptionRecord] = []
+            var deletedCount = 0
+            for record in allRecords {
+                if ids.contains(record.id) {
+                    context.delete(record)
+                    deletedCount += 1
+                } else {
+                    remaining.append(record)
+                }
             }
-            
-            context.delete(recordToDelete)
+            guard deletedCount > 0 else { return }
             try context.save()
-            
-            Logger.dataManager.info("Deleted transcription record with ID: \(record.id)")
-            
-            // Rebuild usage metrics from remaining records
-            let remainingRecords = allRecords.filter { $0.id != record.id }
-            UsageMetricsStore.shared.rebuild(using: remainingRecords)
-            
+            UsageMetricsStore.shared.rebuild(using: remaining)
+            Logger.dataManager.info("Deleted \(deletedCount) transcription records")
         } catch {
-            Logger.dataManager.error("Failed to delete transcription record: \(error.localizedDescription)")
+            Logger.dataManager.error("Failed to delete transcription records: \(error.localizedDescription)")
             throw DataManagerError.deleteFailed(error)
         }
     }
-    
+
     func deleteAllRecords() async throws {
         guard let container = modelContainer else {
             throw DataManagerError.modelContainerUnavailable
@@ -401,8 +416,8 @@ internal final class MockDataManager: DataManagerProtocol {
         
         // Apply pagination if specified
         var results = filteredRecords
-        if let offset = offset, offset < filteredRecords.count {
-            results = Array(filteredRecords.dropFirst(offset))
+        if let offset = offset {
+            results = Array(filteredRecords.dropFirst(max(0, offset)))
         }
         if let limit = limit, limit > 0 {
             results = Array(results.prefix(limit))

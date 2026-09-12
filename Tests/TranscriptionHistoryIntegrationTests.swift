@@ -5,6 +5,8 @@ import SwiftData
 
 @MainActor
 final class TranscriptionHistoryIntegrationTests: XCTestCase {
+    private var defaults: UserDefaults!
+    private var suiteName: String!
     var modelContainer: ModelContainer!
     var modelContext: ModelContext!
     var dataManager: DataManager!
@@ -12,6 +14,9 @@ final class TranscriptionHistoryIntegrationTests: XCTestCase {
     override func setUp() async throws {
         try await super.setUp()
         
+        suiteName = "HistoryIntegration.\(UUID().uuidString)"
+        defaults = try XCTUnwrap(UserDefaults(suiteName: suiteName))
+
         // Create in-memory model container for testing
         modelContainer = try ModelContainer(
             for: TranscriptionRecord.self,
@@ -20,12 +25,11 @@ final class TranscriptionHistoryIntegrationTests: XCTestCase {
         modelContext = ModelContext(modelContainer)
         
         // Set up DataManager with test container
-        dataManager = DataManager.shared as? DataManager
-        try dataManager?.initialize()
+        dataManager = DataManager(modelContainer: modelContainer, defaults: defaults)
         
         // Ensure history is enabled for tests
-        UserDefaults.standard.set(true, forKey: "transcriptionHistoryEnabled")
-        UserDefaults.standard.set(RetentionPeriod.forever.rawValue, forKey: "transcriptionRetentionPeriod")
+        defaults.set(true, forKey: "transcriptionHistoryEnabled")
+        defaults.set(RetentionPeriod.forever.rawValue, forKey: "transcriptionRetentionPeriod")
     }
     
     override func tearDown() async throws {
@@ -43,12 +47,13 @@ final class TranscriptionHistoryIntegrationTests: XCTestCase {
         }
         
         // Clean up UserDefaults
-        UserDefaults.standard.removeObject(forKey: "transcriptionHistoryEnabled")
-        UserDefaults.standard.removeObject(forKey: "transcriptionRetentionPeriod")
+        defaults.removeObject(forKey: "transcriptionHistoryEnabled")
+        defaults.removeObject(forKey: "transcriptionRetentionPeriod")
         
         modelContainer = nil
         modelContext = nil
         dataManager = nil
+        defaults.removePersistentDomain(forName: suiteName)
         
         try await super.tearDown()
     }
@@ -166,12 +171,12 @@ final class TranscriptionHistoryIntegrationTests: XCTestCase {
     
     func testTranscriptionWithHistoryDisabled() async throws {
         // Given - Disable history
-        UserDefaults.standard.set(false, forKey: "transcriptionHistoryEnabled")
+        defaults.set(false, forKey: "transcriptionHistoryEnabled")
         
         let record = createSampleRecord(text: "Should not be saved")
         
         // When - Attempt to save (simulating DataManager behavior)
-        let isHistoryEnabled = UserDefaults.standard.bool(forKey: "transcriptionHistoryEnabled")
+        let isHistoryEnabled = defaults.bool(forKey: "transcriptionHistoryEnabled")
         if isHistoryEnabled {
             modelContext.insert(record)
             try modelContext.save()
@@ -406,22 +411,22 @@ final class TranscriptionHistoryIntegrationTests: XCTestCase {
     
     func testHistoryEnabledSetting() async throws {
         // Test enabling history
-        UserDefaults.standard.set(true, forKey: "transcriptionHistoryEnabled")
-        let isEnabled = UserDefaults.standard.bool(forKey: "transcriptionHistoryEnabled")
+        defaults.set(true, forKey: "transcriptionHistoryEnabled")
+        let isEnabled = defaults.bool(forKey: "transcriptionHistoryEnabled")
         XCTAssertTrue(isEnabled, "History should be enabled")
         
         // Test disabling history
-        UserDefaults.standard.set(false, forKey: "transcriptionHistoryEnabled")
-        let isDisabled = UserDefaults.standard.bool(forKey: "transcriptionHistoryEnabled")
+        defaults.set(false, forKey: "transcriptionHistoryEnabled")
+        let isDisabled = defaults.bool(forKey: "transcriptionHistoryEnabled")
         XCTAssertFalse(isDisabled, "History should be disabled")
     }
     
     func testRetentionPeriodSettings() async throws {
         // Test all retention periods
         for period in RetentionPeriod.allCases {
-            UserDefaults.standard.set(period.rawValue, forKey: "transcriptionRetentionPeriod")
+            defaults.set(period.rawValue, forKey: "transcriptionRetentionPeriod")
             
-            let storedValue = UserDefaults.standard.string(forKey: "transcriptionRetentionPeriod")
+            let storedValue = defaults.string(forKey: "transcriptionRetentionPeriod")
             XCTAssertEqual(storedValue, period.rawValue, "Retention period should be stored correctly")
             
             let retrievedPeriod = RetentionPeriod(rawValue: storedValue!) ?? .oneMonth
@@ -879,7 +884,7 @@ final class TranscriptionHistoryIntegrationTests: XCTestCase {
         let mockDataManager = MockDataManager()
         
         // Test 1: History enabled
-        UserDefaults.standard.set(true, forKey: "transcriptionHistoryEnabled")
+        defaults.set(true, forKey: "transcriptionHistoryEnabled")
         mockDataManager.isHistoryEnabled = true
         
         let testRecord = createSampleRecord(text: "Settings integration test", provider: .openai)
@@ -892,7 +897,7 @@ final class TranscriptionHistoryIntegrationTests: XCTestCase {
         XCTAssertEqual(records.count, 1, "Record should be saved when history is enabled")
         
         // Test 2: History disabled
-        UserDefaults.standard.set(false, forKey: "transcriptionHistoryEnabled")
+        defaults.set(false, forKey: "transcriptionHistoryEnabled")
         mockDataManager.isHistoryEnabled = false
         
         let anotherRecord = createSampleRecord(text: "Should not be saved", provider: .gemini)
@@ -923,8 +928,8 @@ final class TranscriptionHistoryIntegrationTests: XCTestCase {
         await waitForAsyncOperation()
         
         // Test 1: One month retention
-        UserDefaults.standard.set(RetentionPeriod.oneMonth.rawValue, forKey: "transcriptionRetentionPeriod")
-        let retentionPeriod = RetentionPeriod(rawValue: UserDefaults.standard.string(forKey: "transcriptionRetentionPeriod") ?? "") ?? .oneMonth
+        defaults.set(RetentionPeriod.oneMonth.rawValue, forKey: "transcriptionRetentionPeriod")
+        let retentionPeriod = RetentionPeriod(rawValue: defaults.string(forKey: "transcriptionRetentionPeriod") ?? "") ?? .oneMonth
         
         XCTAssertEqual(retentionPeriod, .oneMonth, "Retention period should be set to one month")
         
@@ -939,8 +944,8 @@ final class TranscriptionHistoryIntegrationTests: XCTestCase {
         }
         
         // Test 2: Forever retention
-        UserDefaults.standard.set(RetentionPeriod.forever.rawValue, forKey: "transcriptionRetentionPeriod")
-        let foreverRetention = RetentionPeriod(rawValue: UserDefaults.standard.string(forKey: "transcriptionRetentionPeriod") ?? "") ?? .oneMonth
+        defaults.set(RetentionPeriod.forever.rawValue, forKey: "transcriptionRetentionPeriod")
+        let foreverRetention = RetentionPeriod(rawValue: defaults.string(forKey: "transcriptionRetentionPeriod") ?? "") ?? .oneMonth
         
         XCTAssertEqual(foreverRetention, .forever, "Retention period should be set to forever")
         XCTAssertNil(foreverRetention.timeInterval, "Forever retention should have no time interval")
