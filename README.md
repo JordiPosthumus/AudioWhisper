@@ -53,7 +53,7 @@ When upgrading from AudioWhisper or SpeedyWhisper, quit the previous app and rep
   set -e
   installer=$(mktemp -t scribekitt-install)
   trap 'rm -f "$installer"' EXIT
-  curl -fsSL https://raw.githubusercontent.com/JordiPosthumus/ScribeKitt/v210.15/Scripts/install.sh -o "$installer"
+  curl -fsSL https://raw.githubusercontent.com/JordiPosthumus/ScribeKitt/v210.15/scripts/install.sh -o "$installer"
   /bin/bash "$installer" 210.15
 )
 ```
