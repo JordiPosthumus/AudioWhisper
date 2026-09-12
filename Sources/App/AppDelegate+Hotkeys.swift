@@ -43,6 +43,7 @@ internal extension AppDelegate {
     }
 
     private func startRecordingFromPressAndHold() {
+        guard ensureLocalSetupReady() else { return }
         guard let recorder = audioRecorder else { return }
 
         if recorder.isRecording {
@@ -91,6 +92,7 @@ internal extension AppDelegate {
     }
 
     func handleHotkey(source: HotkeyTriggerSource) {
+        guard ensureLocalSetupReady() else { return }
         if source == .standardHotkey && pressAndHoldConfiguration.enabled {
             return
         }

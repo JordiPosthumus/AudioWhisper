@@ -106,7 +106,7 @@ internal struct FloatingRecorderView: View {
             .help(recording ? "Stop recording" : "Start recording")
             .accessibilityLabel(finalText != nil ? "Copied" : recording ? "Stop recording" : "Start recording")
             VStack(alignment: .leading, spacing: 3) {
-                Text(finalText != nil ? "Copied" : recording ? "Listening" : processing ? "Finalizing" : "SpeedyWhisper")
+                Text(finalText != nil ? "Copied" : recording ? "Listening" : processing ? "Finalizing" : "ScribeKitt")
                     .font(.system(size: 13, weight: .semibold))
                     .foregroundStyle(.white.opacity(0.94))
                 Text(finalText != nil ? "Ready for ⌘V" : processing ? "Checking the complete recording" : streaming ? "LOCAL · LIVE DICTATION" : "LOCAL DICTATION")

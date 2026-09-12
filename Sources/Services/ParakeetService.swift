@@ -26,7 +26,7 @@ internal enum ParakeetError: Error, LocalizedError, Equatable {
         case .processTimedOut(let timeout):
             return "Transcription timed out after \(timeout) seconds\n\nTry with a shorter audio file or check system resources"
         case .modelNotReady:
-            return "Parakeet v2 is not available in the local model cache. Restore the existing model installation before transcribing."
+            return "The local speech model is not ready. Choose Prepare ScribeKitt from the menu bar to finish the one-time setup."
         }
     }
 }
@@ -67,7 +67,7 @@ internal class ParakeetService {
         ParakeetModel.v2English.rawValue
     }
 
-    private func isModelCached() -> Bool {
+    internal func isModelCached() -> Bool {
         let repo = selectedRepo
         let escaped = repo.replacingOccurrences(of: "/", with: "--")
         let base = cacheRoot.appendingPathComponent("models--\(escaped)")
@@ -79,11 +79,13 @@ internal class ParakeetService {
         }
         let snap = base.appendingPathComponent("snapshots/\(rev)")
         guard FileManager.default.fileExists(atPath: snap.path, isDirectory: &isDir), isDir.boolValue else { return false }
-        // Look for at least one weights file under snapshot or blobs
-        let snapFiles = (try? FileManager.default.contentsOfDirectory(atPath: snap.path)) ?? []
-        let blobsFiles = (try? FileManager.default.contentsOfDirectory(atPath: base.appendingPathComponent("blobs").path)) ?? []
-        let hasWeights = snapFiles.contains { $0.hasSuffix(".safetensors") } || blobsFiles.contains { $0.hasSuffix(".safetensors") }
-        return hasWeights
+        // Both files are needed by from_pretrained. A directory or dangling
+        // weight symlink left by an interrupted setup is not a ready model.
+        return ["config.json", "model.safetensors"].allSatisfy { name in
+            let url = snap.appendingPathComponent(name).resolvingSymlinksInPath()
+            guard let size = try? url.resourceValues(forKeys: [.fileSizeKey]).fileSize else { return false }
+            return size > 0 && FileManager.default.isReadableFile(atPath: url.path)
+        }
     }
     
     internal func processAudioToRawPCM(audioFileURL: URL) async throws -> URL {

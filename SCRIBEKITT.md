@@ -1,6 +1,6 @@
-# SpeedyWhisper
+# ScribeKitt
 
-SpeedyWhisper is the personal Parakeet v2 fork of [AudioWhisper by mazdak and contributors](https://github.com/mazdak/AudioWhisper). The original license is retained in `LICENSE` and distributed in the app bundle alongside `CREDITS.md`.
+ScribeKitt is the personal Parakeet v2 fork of [AudioWhisper by mazdak and contributors](https://github.com/mazdak/AudioWhisper). The original license is retained in `LICENSE` and distributed in the app bundle alongside `CREDITS.md`.
 
 ## Recording and manual paste
 
@@ -29,3 +29,7 @@ SPEEDYWHISPER_PREVIEW_DIR=/tmp/speedywhisper-preview swift test --filter Recorde
 ```
 
 No synthetic paste events are used. See `docs/ACCEPTANCE.md` for the live workflow check.
+
+## One-time setup
+
+A new installation offers one Prepare ScribeKitt action for the local Python runtime and Parakeet v2 model. Existing installations bypass setup; no model selector or tuning controls are added. Recording shortcuts open setup until verification succeeds. Normal model loading resolves cached files explicitly offline and retains the same decoder defaults and model cache. See [first-launch validation](docs/FIRST-LAUNCH.md).

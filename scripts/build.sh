@@ -1,6 +1,6 @@
 #!/bin/bash
 
-# AudioWhisper Release Build Script
+# ScribeKitt Release Build Script
 # For development, use: swift build && swift run
 # This script is for creating distributable releases
 
@@ -32,7 +32,7 @@ BUILD_DATE=$(date '+%Y-%m-%d')
 DEFAULT_VERSION=$(cat VERSION | tr -d '[:space:]')
 VERSION="${AUDIO_WHISPER_VERSION:-$DEFAULT_VERSION}"
 
-echo "🎙️ Building SpeedyWhisper version $VERSION..."
+echo "🎙️ Building ScribeKitt version $VERSION..."
 
 # Update Info.plist with current version
 if [ -f "Info.plist" ]; then
@@ -49,7 +49,7 @@ fi
 
 # Clean previous builds
 rm -rf .build/release
-rm -rf SpeedyWhisper.app
+rm -rf ScribeKitt.app
 rm -f Sources/AudioProcessorCLI
 
 # Create version file from template
@@ -78,7 +78,7 @@ struct VersionInfo {
     }
     
     static var fullVersionInfo: String {
-        var info = "SpeedyWhisper \(version)"
+        var info = "ScribeKitt \(version)"
         if gitHash != "unknown" && !gitHash.isEmpty {
             let shortHash = String(gitHash.prefix(7))
             info += " • \(shortHash)"
@@ -106,43 +106,43 @@ fi
 
 # Create app bundle
 echo "Creating app bundle..."
-mkdir -p SpeedyWhisper.app/Contents/MacOS
-mkdir -p SpeedyWhisper.app/Contents/Resources
-mkdir -p SpeedyWhisper.app/Contents/Resources/bin
+mkdir -p ScribeKitt.app/Contents/MacOS
+mkdir -p ScribeKitt.app/Contents/Resources
+mkdir -p ScribeKitt.app/Contents/Resources/bin
 
 # Set build number for Info.plist
 BUILD_NUMBER="${VERSION//./}"
 
 # Copy executable (universal binary)
-cp "$RELEASE_DIR/AudioWhisper" SpeedyWhisper.app/Contents/MacOS/
+cp "$RELEASE_DIR/AudioWhisper" ScribeKitt.app/Contents/MacOS/
 
 # Copy ML daemon entrypoint and package
 if [ -f "Sources/ml_daemon.py" ]; then
-  cp Sources/ml_daemon.py SpeedyWhisper.app/Contents/Resources/
+  cp Sources/ml_daemon.py ScribeKitt.app/Contents/Resources/
   echo "Copied ML daemon entrypoint"
 fi
 if [ -d "Sources/ml" ]; then
-  cp -R Sources/ml SpeedyWhisper.app/Contents/Resources/
+  cp -R Sources/ml ScribeKitt.app/Contents/Resources/
   # Remove __pycache__ directories
-  find SpeedyWhisper.app/Contents/Resources/ml -name "__pycache__" -type d -exec rm -rf {} + 2>/dev/null || true
+  find ScribeKitt.app/Contents/Resources/ml -name "__pycache__" -type d -exec rm -rf {} + 2>/dev/null || true
   echo "Copied ml package"
 else
   echo "⚠️ Sources/ml package not found, ML daemon will not work"
 fi
 
 # Include the SwiftPM resource bundle for Bundle.module lookups.
-cp -R "$RELEASE_DIR/AudioWhisper_AudioWhisper.bundle" SpeedyWhisper.app/Contents/Resources/ || exit 1
+cp -R "$RELEASE_DIR/AudioWhisper_AudioWhisper.bundle" ScribeKitt.app/Contents/Resources/ || exit 1
 
 # Bundle uv (Apple Silicon). Prefer repo copy; else fall back to system uv if available
 if [ -f "Sources/Resources/bin/uv" ]; then
-  cp Sources/Resources/bin/uv SpeedyWhisper.app/Contents/Resources/bin/uv
-  chmod +x SpeedyWhisper.app/Contents/Resources/bin/uv
+  cp Sources/Resources/bin/uv ScribeKitt.app/Contents/Resources/bin/uv
+  chmod +x ScribeKitt.app/Contents/Resources/bin/uv
   echo "Bundled uv binary (from repo)"
 else
   if command -v uv >/dev/null 2>&1; then
     UV_PATH=$(command -v uv)
-    cp "$UV_PATH" SpeedyWhisper.app/Contents/Resources/bin/uv
-    chmod +x SpeedyWhisper.app/Contents/Resources/bin/uv
+    cp "$UV_PATH" ScribeKitt.app/Contents/Resources/bin/uv
+    chmod +x ScribeKitt.app/Contents/Resources/bin/uv
     echo "Bundled uv binary (from system: $UV_PATH)"
   else
     echo "ℹ️ No bundled uv found and no system uv available; runtime will try PATH"
@@ -151,7 +151,7 @@ fi
 
 # Bundle pyproject.toml and uv.lock if present
 if [ -f "Sources/Resources/pyproject.toml" ]; then
-  cp Sources/Resources/pyproject.toml SpeedyWhisper.app/Contents/Resources/pyproject.toml
+  cp Sources/Resources/pyproject.toml ScribeKitt.app/Contents/Resources/pyproject.toml
   echo "Bundled pyproject.toml"
 else
   echo "ℹ️ No pyproject.toml found in Sources/Resources"
@@ -161,7 +161,7 @@ fi
 
 # Create proper Info.plist
 echo "Creating Info.plist..."
-cat >SpeedyWhisper.app/Contents/Info.plist <<EOF
+cat >ScribeKitt.app/Contents/Info.plist <<EOF
 <?xml version="1.0" encoding="UTF-8"?>
 <!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
 <plist version="1.0">
@@ -175,9 +175,9 @@ cat >SpeedyWhisper.app/Contents/Info.plist <<EOF
     <key>CFBundleInfoDictionaryVersion</key>
     <string>6.0</string>
     <key>CFBundleName</key>
-    <string>SpeedyWhisper</string>
+    <string>ScribeKitt</string>
     <key>CFBundleDisplayName</key>
-    <string>SpeedyWhisper</string>
+    <string>ScribeKitt</string>
     <key>CFBundlePackageType</key>
     <string>APPL</string>
     <key>CFBundleShortVersionString</key>
@@ -187,7 +187,7 @@ cat >SpeedyWhisper.app/Contents/Info.plist <<EOF
     <key>LSMinimumSystemVersion</key>
     <string>14.0</string>
     <key>NSMicrophoneUsageDescription</key>
-    <string>SpeedyWhisper needs access to your microphone to record audio for transcription.</string>
+    <string>ScribeKitt needs access to your microphone to record audio for transcription.</string>
     <key>LSUIElement</key>
     <true/>
     <key>NSAppTransportSecurity</key>
@@ -218,27 +218,27 @@ cat >SpeedyWhisper.app/Contents/Info.plist <<EOF
 EOF
 
 # Generate app icon from our source image
-if [ -f "SpeedyWhisperIcon.png" ]; then
+if [ -f "ScribeKittIcon.png" ]; then
   "$SCRIPT_DIR/generate-icons.sh"
 
   # Create proper icns file directly in app bundle
   if command -v iconutil >/dev/null 2>&1; then
-    iconutil -c icns SpeedyWhisper.iconset -o SpeedyWhisper.app/Contents/Resources/AppIcon.icns 2>/dev/null || echo "Note: iconutil failed, app will use default icon"
+    iconutil -c icns ScribeKitt.iconset -o ScribeKitt.app/Contents/Resources/AppIcon.icns 2>/dev/null || echo "Note: iconutil failed, app will use default icon"
   fi
 
   # Clean up temporary files
-  rm -rf SpeedyWhisper.iconset
+  rm -rf ScribeKitt.iconset
   rm -f AppIcon.icns # Remove any stray icns file from root
 else
-  echo "⚠️ SpeedyWhisperIcon.png not found, app will use default icon"
+  echo "⚠️ ScribeKittIcon.png not found, app will use default icon"
 fi
 
 # Keep the original project's license and attribution in distributed app bundles.
-cp LICENSE SpeedyWhisper.app/Contents/Resources/LICENSE.txt
-cp CREDITS.md SpeedyWhisper.app/Contents/Resources/CREDITS.md
+cp LICENSE ScribeKitt.app/Contents/Resources/LICENSE.txt
+cp CREDITS.md ScribeKitt.app/Contents/Resources/CREDITS.md
 
 # Make executable
-chmod +x SpeedyWhisper.app/Contents/MacOS/AudioWhisper
+chmod +x ScribeKitt.app/Contents/MacOS/AudioWhisper
 
 # Create entitlements file for hardened runtime
 echo "Creating entitlements for hardened runtime..."
@@ -267,14 +267,14 @@ sign_app() {
   fi
 
   # Sign uv binary if present (nested executable)
-  if [ -f "SpeedyWhisper.app/Contents/Resources/bin/uv" ]; then
-    codesign --force --sign "$identity" --options runtime --entitlements AudioWhisper.entitlements SpeedyWhisper.app/Contents/Resources/bin/uv
+  if [ -f "ScribeKitt.app/Contents/Resources/bin/uv" ]; then
+    codesign --force --sign "$identity" --options runtime --entitlements AudioWhisper.entitlements ScribeKitt.app/Contents/Resources/bin/uv
   fi
 
-  codesign --force --deep --sign "$identity" --options runtime --entitlements AudioWhisper.entitlements SpeedyWhisper.app
+  codesign --force --deep --sign "$identity" --options runtime --entitlements AudioWhisper.entitlements ScribeKitt.app
   if [ $? -eq 0 ]; then
     echo "🔍 Verifying signature..."
-    codesign --verify --verbose SpeedyWhisper.app
+    codesign --verify --verbose ScribeKitt.app
     echo "✅ App signed successfully"
     return 0
   else
@@ -325,13 +325,13 @@ if [ "$NOTARIZE" = true ]; then
     echo "To create an app-specific password:"
     echo "1. Go to https://appleid.apple.com/account/manage"
     echo "2. Sign in and go to Security > App-Specific Passwords"
-    echo "3. Generate a new password for AudioWhisper notarization"
+    echo "3. Generate a new password for ScribeKitt notarization"
     echo ""
     exit 1
   fi
 
   # Check if app is signed
-  if codesign -dvvv SpeedyWhisper.app 2>&1 | grep -q "Signature=adhoc"; then
+  if codesign -dvvv ScribeKitt.app 2>&1 | grep -q "Signature=adhoc"; then
     echo "❌ App must be properly signed before notarization (not adhoc signed)"
     echo "Please ensure CODE_SIGN_IDENTITY is set or a Developer ID is available"
     exit 1
@@ -339,11 +339,11 @@ if [ "$NOTARIZE" = true ]; then
 
   # Create a zip file for notarization
   echo "Creating zip for notarization..."
-  ditto -c -k --keepParent SpeedyWhisper.app SpeedyWhisper.zip
+  ditto -c -k --keepParent ScribeKitt.app ScribeKitt.zip
 
   # Submit for notarization
   echo "📤 Submitting to Apple for notarization..."
-  xcrun notarytool submit SpeedyWhisper.zip \
+  xcrun notarytool submit ScribeKitt.zip \
     --apple-id "$AUDIO_WHISPER_APPLE_ID" \
     --password "$AUDIO_WHISPER_APPLE_PASSWORD" \
     --team-id "$AUDIO_WHISPER_TEAM_ID" \
@@ -353,7 +353,7 @@ if [ "$NOTARIZE" = true ]; then
   if grep -q "status: Accepted" notarization.log; then
     # Staple the notarization ticket to the app
     echo "📎 Stapling notarization ticket..."
-    xcrun stapler staple SpeedyWhisper.app
+    xcrun stapler staple ScribeKitt.app
 
     if [ $? -eq 0 ]; then
       echo "✅ Notarization ticket stapled successfully!"
@@ -371,10 +371,10 @@ if [ "$NOTARIZE" = true ]; then
   fi
 
   # Clean up
-  rm -f SpeedyWhisper.zip
+  rm -f ScribeKitt.zip
   rm -f notarization.log
 fi
 
 echo "✅ Build complete!"
 echo ""
-open -R SpeedyWhisper.app
+open -R ScribeKitt.app

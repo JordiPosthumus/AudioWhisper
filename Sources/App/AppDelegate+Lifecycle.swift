@@ -24,7 +24,11 @@ internal extension AppDelegate {
 
         AppSetupHelper.setupApp()
 
-        audioRecorder = AudioRecorder()
+        // New installs finish setup before asking for microphone access.
+        // Established installs retain their normal recorder initialization.
+        if LocalSetupManager.shared.isReady {
+            audioRecorder = AudioRecorder()
+        }
 
         statusItem = NSStatusBar.system.statusItem(withLength: NSStatusItem.variableLength)
         if let button = statusItem?.button {
@@ -48,6 +52,10 @@ internal extension AppDelegate {
         )
 
         setupNotificationObservers()
+
+        if !LocalSetupManager.shared.isReady {
+            showLocalSetup()
+        }
 
     }
 

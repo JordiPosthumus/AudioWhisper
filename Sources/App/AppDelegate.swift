@@ -14,6 +14,15 @@ internal class AppDelegate: NSObject, NSApplicationDelegate {
     var pressAndHoldConfiguration = PressAndHoldSettings.configuration()
     var isHoldRecordingActive = false
 
+    func ensureLocalSetupReady() -> Bool {
+        guard LocalSetupManager.shared.isReady else {
+            showLocalSetup()
+            return false
+        }
+        if audioRecorder == nil { audioRecorder = AudioRecorder() }
+        return true
+    }
+
     enum HotkeyTriggerSource {
         case standardHotkey
         case pressAndHold

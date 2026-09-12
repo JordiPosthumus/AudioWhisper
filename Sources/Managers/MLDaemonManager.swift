@@ -57,6 +57,25 @@ internal actor MLDaemonManager {
 
     // MARK: - Public API
 
+    func prepareRuntime() async throws {
+        struct Result: Decodable { let pong: Bool }
+        let result: Result = try await sendRequest(method: "ping", params: [:])
+        guard result.pong else { throw MLDaemonError.daemonUnavailable("Runtime did not respond") }
+    }
+
+    /// Called only by the explicit first-run setup action, never by transcription.
+    func prepareModel() async throws {
+        struct Result: Decodable { let success: Bool }
+        let result: Result = try await sendRequest(method: "prepare_model", params: [:])
+        guard result.success else { throw MLDaemonError.remoteError("Model setup did not finish") }
+    }
+
+    func verifySetup() async throws {
+        struct Result: Decodable { let success: Bool }
+        let result: Result = try await sendRequest(method: "verify_setup", params: [:])
+        guard result.success else { throw MLDaemonError.remoteError("Offline model verification failed") }
+    }
+
     struct PreviewResult: Decodable, Equatable {
         let active: Bool
         let stable: String

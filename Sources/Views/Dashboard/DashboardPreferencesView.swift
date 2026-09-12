@@ -27,7 +27,7 @@ internal struct DashboardPreferencesView: View {
                 Toggle(isOn: $startAtLogin) {
                     VStack(alignment: .leading, spacing: 2) {
                         Text("Start at Login")
-                        Text("Launch SpeedyWhisper when you sign in.")
+                        Text("Launch ScribeKitt when you sign in.")
                             .font(.caption)
                             .foregroundStyle(.secondary)
                     }

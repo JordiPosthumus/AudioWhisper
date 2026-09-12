@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import os
+from pathlib import Path
 from typing import Any, Dict, Tuple
 
 # Keep HF from grabbing a token implicitly; don't force offline globally here.
@@ -42,7 +43,20 @@ def load_parakeet_model(repo: str):
 
     previous = _set_offline_env()
     try:
-        model = from_pretrained(repo)
+        from huggingface_hub import hf_hub_download
+
+        # Hub libraries may cache their offline flag at import time. Resolve the
+        # existing files explicitly offline, then pass the snapshot directory to
+        # Parakeet so loading cannot make a metadata request. Decoder defaults,
+        # weights and the process-level model cache remain unchanged.
+        snapshot = Path(repo)
+        if not snapshot.is_dir():
+            config = Path(hf_hub_download(repo, "config.json", local_files_only=True))
+            weights = Path(hf_hub_download(repo, "model.safetensors", local_files_only=True))
+            if config.parent != weights.parent:
+                raise RuntimeError("Cached model files refer to different snapshots")
+            snapshot = config.parent
+        model = from_pretrained(str(snapshot))
     except Exception as exc:
         _restore_env(previous)
         raise RuntimeError(f"Model not available offline: {exc}") from exc
@@ -50,4 +64,3 @@ def load_parakeet_model(repo: str):
 
     MODEL_CACHE[cache_key] = model
     return model
-

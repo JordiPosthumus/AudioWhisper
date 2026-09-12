@@ -6,6 +6,24 @@ import AppKit
 /// Opt-in offscreen renders; fixture meter samples are never used in the application.
 @MainActor
 final class RecorderPreviewRenderTests: XCTestCase {
+    func testRenderFirstRunSetup() async throws {
+        guard let destination = ProcessInfo.processInfo.environment["SPEEDYWHISPER_PREVIEW_DIR"] else {
+            throw XCTSkip("Set SPEEDYWHISPER_PREVIEW_DIR for setup renders")
+        }
+        let directory = URL(fileURLWithPath: destination, isDirectory: true)
+        try FileManager.default.createDirectory(at: directory, withIntermediateDirectories: true)
+        let waiting = LocalSetupManager(supported: true, existingInstallation: { false })
+        let ready = LocalSetupManager(supported: true, existingInstallation: { true })
+        let failed = LocalSetupManager(supported: true, existingInstallation: { false },
+            runtime: { throw URLError(.notConnectedToInternet) })
+        await failed.prepare()
+        for (name, setup) in [("setup", waiting), ("setup-ready", ready), ("setup-error", failed)] {
+            let view = LocalSetupView(setup: setup, onContinue: {})
+            let host = NSHostingView(rootView: view)
+            try render(view, to: directory.appendingPathComponent(name + ".png"), size: host.fittingSize)
+        }
+    }
+
     func testRenderRecorderAndPreview() throws {
         guard let destination = ProcessInfo.processInfo.environment["SPEEDYWHISPER_PREVIEW_DIR"] else {
             throw XCTSkip("Set SPEEDYWHISPER_PREVIEW_DIR to render the recorder states")

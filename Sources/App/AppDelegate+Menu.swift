@@ -5,6 +5,10 @@ import UniformTypeIdentifiers
 internal extension AppDelegate {
     func makeStatusMenu() -> NSMenu {
         let menu = NSMenu()
+        if !LocalSetupManager.shared.isReady {
+            menu.addItem(NSMenuItem(title: "Prepare ScribeKitt...", action: #selector(showLocalSetup), keyEquivalent: ""))
+            menu.addItem(NSMenuItem.separator())
+        }
         menu.addItem(NSMenuItem(title: LocalizedStrings.Menu.record, action: #selector(toggleRecordWindow), keyEquivalent: ""))
         menu.addItem(NSMenuItem(title: "Transcribe Audio File...", action: #selector(transcribeAudioFile), keyEquivalent: ""))
         menu.addItem(NSMenuItem.separator())
@@ -26,6 +30,7 @@ internal extension AppDelegate {
     }
 
     @objc func transcribeAudioFile() {
+        guard ensureLocalSetupReady() else { return }
         let panel = NSOpenPanel()
         panel.allowsMultipleSelection = false
         panel.canChooseDirectories = false
@@ -72,6 +77,14 @@ internal extension AppDelegate {
 
         if let button = statusItem?.button {
             button.image = AppSetupHelper.createMenuBarIcon()
+        }
+    }
+
+    @objc func showLocalSetup() {
+        LocalSetupWindowController.shared.show { [weak self] in
+            guard let self else { return }
+            statusItem?.menu = makeStatusMenu()
+            toggleRecordWindow()
         }
     }
 }

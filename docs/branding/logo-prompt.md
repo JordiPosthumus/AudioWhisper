@@ -1,6 +1,6 @@
-# SpeedyWhisper icon
+# ScribeKitt icon
 
-Generated with the built-in image-generation tool. The full-resolution selected output is `SpeedyWhisperIcon.png`; the app icon sizes are derived with macOS `sips` and `iconutil`.
+Generated with the built-in image-generation tool. The icon was originally generated for the SpeedyWhisper name and retained for ScribeKitt. The full-resolution selected output is `ScribeKittIcon.png`; the app icon sizes are derived with macOS `sips` and `iconutil`.
 
 Prompt:
 

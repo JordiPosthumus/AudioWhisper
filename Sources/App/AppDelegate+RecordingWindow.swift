@@ -5,6 +5,7 @@ import SwiftUI
 
 internal extension AppDelegate {
     @objc func toggleRecordWindow() {
+        guard ensureLocalSetupReady() else { return }
         if recordingWindow == nil {
             createRecordingWindow()
         }

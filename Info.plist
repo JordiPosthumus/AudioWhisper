@@ -11,15 +11,15 @@
 	<key>CFBundleInfoDictionaryVersion</key>
 	<string>6.0</string>
 	<key>CFBundleName</key>
-	<string>SpeedyWhisper</string>
+	<string>ScribeKitt</string>
 	<key>CFBundleDisplayName</key>
-	<string>SpeedyWhisper</string>
+	<string>ScribeKitt</string>
 	<key>CFBundlePackageType</key>
 	<string>APPL</string>
 	<key>CFBundleShortVersionString</key>
-	<string>210.12</string>
+	<string>210.13</string>
 	<key>CFBundleVersion</key>
-	<string>21012</string>
+	<string>21013</string>
 	<key>LSMinimumSystemVersion</key>
 	<string>$(MACOSX_DEPLOYMENT_TARGET)</string>
 	<key>LSUIElement</key>
@@ -30,6 +30,6 @@
 		<true/>
 	</dict>
 	<key>NSMicrophoneUsageDescription</key>
-	<string>SpeedyWhisper needs access to your microphone to record audio for transcription.</string>
+	<string>ScribeKitt needs access to your microphone to record audio for transcription.</string>
 </dict>
 </plist>

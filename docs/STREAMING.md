@@ -1,6 +1,6 @@
 # Live draft plus unchanged final transcription
 
-The preview uses the installed Parakeet v2 model with its normal full-attention decoder. No Python dependency, model, decoder setting, microphone-volume setting, or runtime manifest is upgraded or replaced.
+The preview uses the installed Parakeet v2 model with its normal full-attention decoder. Existing Python dependencies, cached models, decoder settings, microphone-volume settings, and runtime manifests are preserved. New installations have a separate, explicit one-time setup action. Model loading resolves the cached snapshot with `local_files_only=True`, avoiding network metadata requests while keeping normal Parakeet decoder defaults.
 
 ## Data flow
 

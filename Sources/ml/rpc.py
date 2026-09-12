@@ -20,6 +20,12 @@ def _respond(payload: Dict[str, Any]) -> None:
 def _execute(method: str, params: Dict[str, Any]) -> Dict[str, Any]:
     if method == "ping":
         return {"pong": True}
+    if method == "prepare_model":
+        from .setup import prepare_model
+        return prepare_model()
+    if method == "verify_setup":
+        from .setup import verify_model
+        return verify_model()
     if method == "transcribe":
         repo = params.get("repo") or DEFAULT_PARAKEET_REPO
         pcm_path = params.get("pcm_path")

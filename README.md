@@ -1,8 +1,10 @@
-# SpeedyWhisper
+# ScribeKitt
 
-<p align="center"><img src="SpeedyWhisperIcon.png" width="128" alt="SpeedyWhisper app icon"></p>
+<p align="center"><img src="ScribeKittIcon.png" width="128" alt="ScribeKitt app icon"></p>
 
-A small, local macOS dictation app: watch your words appear while you speak, then paste with ⌘V.
+**Your voice. Your Mac. Your words.**
+
+Local macOS dictation with a KITT-inspired voice display: watch your words appear while you speak, then paste with ⌘V.
 
 <p align="center"><img src="docs/images/showcase.png" width="960" alt="Native macOS dictation panel with a red KITT-style voice display, status indicators, and a live transcript"></p>
 <p align="center"><em>The native recorder interface with sample text. Live words appear beside the voice display; the panel expands for longer dictations.</em></p>
@@ -19,13 +21,28 @@ A small, local macOS dictation app: watch your words appear while you speak, the
 
 Recording, live text, and manual paste require no Accessibility setup. Auto-hide on the ⌘V shortcut also works when macOS allows the existing global keyboard listener; otherwise the brief timed dismissal remains. The app never sends paste keystrokes. Turn **Transcription Streaming** off in Preferences to use record-then-transcribe without live audio processing. The setting is saved and applies to the next recording.
 
+## First launch
+
+ScribeKitt requires an **Apple Silicon Mac (M1 or newer)** and macOS 14 or later. The current model supports **English dictation**.
+
+1. Move `ScribeKitt.app` to Applications and open it.
+2. Choose **Prepare ScribeKitt**. Setup prepares Python, downloads the roughly 2.5 GB Parakeet v2 model, and checks offline loading. Allow 6 GB of free space and an internet connection for setup.
+3. Choose **Start dictating**, grant microphone access when prompted, and try a short sentence. Stop, then paste with **⌘V**.
+
+Existing installations with the model and runtime already present skip setup. If a download is interrupted, reopen the app and choose **Prepare ScribeKitt** to retry; completed cached files are reused. Normal model loading and transcription use the local snapshot without online metadata requests.
+
+<details>
+<summary>Preview the first-run setup</summary>
+
+<img src="docs/images/setup.png" width="520" alt="ScribeKitt first-run setup with runtime, model download, and offline verification steps">
+
+</details>
+
 ## This fork
 
-SpeedyWhisper uses the existing local **Parakeet v2** installation on Apple Silicon. It removes cloud transcription, WhisperKit, semantic correction, statistics, app categories, and model setup screens. File transcription, completion sounds, and microphone boosting remain.
+ScribeKitt focuses on local **Parakeet v2** dictation, live text, and a compact history. File transcription, completion sounds, and microphone boosting are included. It keeps the original project's license and credits.
 
-This is a personal build for an established AudioWhisper installation. It expects the existing cached `mlx-community/parakeet-tdt-0.6b-v2` model and app-managed Python environment. It does not include a new model-download wizard. macOS 14 or newer is required.
-
-The original bundle identifier and application-support paths remain in use to preserve history, preferences, and runtime compatibility. The installed app is `/Applications/SpeedyWhisper.app`. Its internal identifier and data folders keep their original names to retain existing history, preferences, and model files.
+When upgrading from AudioWhisper or SpeedyWhisper, quit the previous app and replace it. These builds share their established history and preferences. The original bundle identifier and application-support paths remain in use to preserve runtime compatibility. The installed app is `/Applications/ScribeKitt.app`. Its internal identifier and data folders keep their original names to retain existing history, preferences, and model files.
 
 ## Build
 
@@ -35,6 +52,6 @@ swift test
 CODE_SIGN_IDENTITY=- scripts/build.sh
 ```
 
-The release script produces `SpeedyWhisper.app`. An installed `uv` executable or a copy in `Sources/Resources/bin/uv` is needed for runtime packaging. The existing Python dependency manifest is deliberately preserved; removing unused packages from the live environment is a separate change.
+The release script produces `ScribeKitt.app`. The command above uses ad-hoc signing for local testing; a public download should be signed with Developer ID and notarized before distribution. An installed `uv` executable or a copy in `Sources/Resources/bin/uv` is needed for runtime packaging. The existing Python dependency manifest is deliberately preserved; removing unused packages from the live environment is a separate change.
 
-See [the streaming design and measured validation](docs/STREAMING.md), [the interface notes](SPEEDYWHISPER.md), [the reduction scope](SLIM_BUILD.md), and [the logo source and generation prompt](docs/branding/logo-prompt.md).
+See [the streaming design and measured validation](docs/STREAMING.md), [the interface notes](SCRIBEKITT.md), [the reduction scope](SLIM_BUILD.md), and [the logo source and generation prompt](docs/branding/logo-prompt.md).
