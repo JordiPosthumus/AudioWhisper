@@ -4,27 +4,6 @@ import ApplicationServices
 import Carbon
 import Observation
 
-// Helper class to safely capture observer in closure
-// Uses a lock to ensure thread-safe access to the mutable observer property
-// @unchecked is required because we have mutable state but we ensure thread safety via NSLock
-private final class ObserverBox: @unchecked Sendable {
-    private let lock = NSLock()
-    private var _observer: NSObjectProtocol?
-    
-    var observer: NSObjectProtocol? {
-        get {
-            lock.lock()
-            defer { lock.unlock() }
-            return _observer
-        }
-        set {
-            lock.lock()
-            defer { lock.unlock() }
-            _observer = newValue
-        }
-    }
-}
-
 /// Errors that can occur during paste operations
 internal enum PasteError: LocalizedError {
     case accessibilityPermissionDenied
@@ -50,16 +29,24 @@ internal enum PasteError: LocalizedError {
 @MainActor
 internal class PasteManager {
     
+    private let defaults: UserDefaults
+    private let pasteboard: NSPasteboard
     private let accessibilityManager: AccessibilityPermissionManager
     
-    init(accessibilityManager: AccessibilityPermissionManager = AccessibilityPermissionManager()) {
+    init(
+        accessibilityManager: AccessibilityPermissionManager = AccessibilityPermissionManager(),
+        defaults: UserDefaults = .standard,
+        pasteboard: NSPasteboard = .general
+    ) {
+        self.defaults = defaults
+        self.pasteboard = pasteboard
         self.accessibilityManager = accessibilityManager
     }
     
     /// Attempts to paste text to the currently active application
     /// Uses CGEvent to simulate ⌘V 
     func pasteToActiveApp() {
-        let enableSmartPaste = UserDefaults.standard.bool(forKey: "enableSmartPaste")
+        let enableSmartPaste = defaults.bool(forKey: "enableSmartPaste")
         
         if enableSmartPaste {
             // Use CGEvent to simulate ⌘V
@@ -74,11 +61,10 @@ internal class PasteManager {
     /// This is the function mentioned in the test requirements
     func smartPaste(into targetApp: NSRunningApplication?, text: String) {
         // First copy text to clipboard as fallback - this ensures users always have access to the text
-        let pasteboard = NSPasteboard.general
         pasteboard.clearContents()
         pasteboard.setString(text, forType: .string)
         
-        let enableSmartPaste = UserDefaults.standard.bool(forKey: "enableSmartPaste")
+        let enableSmartPaste = defaults.bool(forKey: "enableSmartPaste")
         
         guard enableSmartPaste else {
             // SmartPaste is disabled in settings - fail with appropriate error
@@ -110,9 +96,13 @@ internal class PasteManager {
         }
         
         // Wait for app to become active before pasting
-        waitForApplicationActivation(targetApp) { [weak self] in
+        ApplicationActivationWaiter.wait(for: targetApp) { [weak self] activated in
             guard let self = self else { return }
             
+            guard activated else {
+                self.handlePasteResult(.failure(PasteError.targetAppNotAvailable))
+                return
+            }
             // Double-check permission before performing paste (belt and suspenders approach)
             guard self.accessibilityManager.checkPermission() else {
                 // Permission was revoked between initial check and paste attempt
@@ -256,45 +246,6 @@ internal class PasteManager {
     @available(*, deprecated, message: "Use handlePasteResult instead")
     private func handlePasteFailure(reason: String) {
         handlePasteResult(.failure(PasteError.keyboardEventCreationFailed))
-    }
-    
-    // MARK: - App Activation Handling
-    
-    private func waitForApplicationActivation(_ target: NSRunningApplication, completion: @escaping () -> Void) {
-        // If already active, execute completion immediately
-        if target.isActive {
-            completion()
-            return
-        }
-        
-        let observerBox = ObserverBox()
-        var timeoutCancelled = false
-        
-        // Set up timeout
-        DispatchQueue.main.asyncAfter(deadline: .now() + 0.3) { [weak observerBox] in
-            guard !timeoutCancelled else { return }
-            if let observer = observerBox?.observer {
-                NotificationCenter.default.removeObserver(observer)
-            }
-            // Execute completion even on timeout to avoid hanging
-            completion()
-        }
-        
-        // Observe app activation
-        observerBox.observer = NotificationCenter.default.addObserver(
-            forName: NSWorkspace.didActivateApplicationNotification,
-            object: nil,
-            queue: .main
-        ) { [weak observerBox] notification in
-            if let activatedApp = notification.userInfo?[NSWorkspace.applicationUserInfoKey] as? NSRunningApplication,
-               activatedApp.processIdentifier == target.processIdentifier {
-                timeoutCancelled = true
-                if let observer = observerBox?.observer {
-                    NotificationCenter.default.removeObserver(observer)
-                }
-                completion()
-            }
-        }
     }
     
 }

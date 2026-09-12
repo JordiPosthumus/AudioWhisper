@@ -4,6 +4,11 @@ import AppKit
 final class MockRunningApplication: NSRunningApplication {
     var mockIsTerminated: Bool = false
     var mockActivationCount: Int = 0
+    var mockIsActive = false
+    var mockProcessIdentifier: pid_t = 123
+
+    override var isActive: Bool { mockIsActive }
+    override var processIdentifier: pid_t { mockProcessIdentifier }
 
     override var isTerminated: Bool { mockIsTerminated }
 

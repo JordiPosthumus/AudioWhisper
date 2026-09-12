@@ -20,16 +20,18 @@ extension NSSound: SoundPlayable {}
 
 @MainActor
 internal class SoundManager: ObservableObject {
+    private let defaults: UserDefaults
     private let soundProvider: SoundProviding
     
-    init(soundProvider: SoundProviding = SystemSoundProvider()) {
+    init(soundProvider: SoundProviding = SystemSoundProvider(), defaults: UserDefaults = .standard) {
+        self.defaults = defaults
         self.soundProvider = soundProvider
     }
     
     /// Plays a gentle completion sound when transcription finishes
     func playCompletionSound() {
         // Check user preference before playing sound
-        let playSound = UserDefaults.standard.object(forKey: "playCompletionSound") as? Bool ?? true
+        let playSound = defaults.object(forKey: "playCompletionSound") as? Bool ?? true
 
         guard playSound else { return }
 
@@ -41,7 +43,7 @@ internal class SoundManager: ObservableObject {
     /// Plays a quick sound when recording starts in express mode
     func playRecordingStartSound() {
         // Check user preference before playing sound (reuse completion sound setting)
-        let playSound = UserDefaults.standard.object(forKey: "playCompletionSound") as? Bool ?? true
+        let playSound = defaults.object(forKey: "playCompletionSound") as? Bool ?? true
 
         guard playSound else { return }
 
