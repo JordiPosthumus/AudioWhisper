@@ -318,3 +318,18 @@ Potential test suite improvements:
 - Stress testing with large audio files
 - Accessibility testing
 - Localization testing for multiple languages
+## Audit regression checks
+
+`make test` now runs the complete Swift suite. Pass SwiftPM options directly to
+`scripts/run-tests.sh`, for example `scripts/run-tests.sh --filter AudioProcessorTests`.
+
+The daemon protocol regressions use only Python's standard library:
+
+```sh
+PYTHONDONTWRITEBYTECODE=1 python3 -m unittest discover -s Tests -p 'test_*.py' -v
+```
+
+`GeminiUploadRoutingTests` uses an isolated URL protocol and fake credentials; it
+makes no real provider requests. `MLDaemonLifecycleTests` launches temporary fake
+Python daemons and never provisions model environments. The PCM benchmark and its
+limits are documented in `docs/EFFICIENCY-AUDIT.md`.
