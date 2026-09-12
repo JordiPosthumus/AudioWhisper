@@ -3,6 +3,18 @@ import AppKit
 @testable import AudioWhisper
 
 final class RecorderPresentationTests: XCTestCase {
+    func testRecorderIsExactlyCenteredOnEachDisplay() {
+        let size = CGSize(width: 224, height: 64)
+        for screen in [CGRect(x: 0, y: 0, width: 1728, height: 1117),
+                       CGRect(x: -1920, y: -300, width: 1920, height: 1080),
+                       CGRect(x: 1728, y: 100, width: 2560, height: 1440)] {
+            let frame = RecorderWindowGeometry.centered(size: size, on: screen)
+            XCTAssertEqual(frame.midX, screen.midX)
+            XCTAssertEqual(frame.midY, screen.midY)
+            XCTAssertEqual(frame.size, size)
+        }
+    }
+
     func testMeterRejectsNonFiniteValuesAndClampsBounds() {
         XCTAssertEqual(AudioLevelDisplay.clamped(.nan), 0)
         XCTAssertEqual(AudioLevelDisplay.clamped(.infinity), 0)

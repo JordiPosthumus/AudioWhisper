@@ -58,8 +58,18 @@ internal class WindowController {
     func showRecordingIndicator(_ window: NSWindow) {
         guard !isTestEnvironment else { return }
         storePreviousApp()
+        centerRecordingWindow(window)
         window.level = .modalPanel
         window.orderFrontRegardless()
+    }
+
+    static func recordingScreen() -> NSScreen? {
+        NSScreen.screens.first { NSMouseInRect(NSEvent.mouseLocation, $0.frame, false) } ?? NSScreen.main
+    }
+
+    func centerRecordingWindow(_ window: NSWindow) {
+        guard let screen = Self.recordingScreen() else { return }
+        window.setFrame(RecorderWindowGeometry.centered(size: window.frame.size, on: screen.frame), display: true)
     }
 
     private func hideWindow(_ window: NSWindow, completion: (() -> Void)? = nil) {
@@ -74,6 +84,8 @@ internal class WindowController {
             return
         }
         
+        centerRecordingWindow(window)
+
         // Remember the currently active app before showing our window
         storePreviousApp()
         

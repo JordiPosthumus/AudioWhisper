@@ -4,7 +4,7 @@ SpeedyWhisper is the personal Parakeet v2 fork of [AudioWhisper by mazdak and co
 
 ## Recording and manual paste
 
-A 224 × 64 point floating recorder appears immediately for Express Mode and press-and-hold dictation. It stays near the bottom of the active screen without taking keyboard focus. Its orb, timer, and meter follow the actual recording. Silence does not generate artificial waveform activity.
+A 224 × 64 point floating recorder appears immediately for Express Mode and press-and-hold dictation. It appears at the exact geometric center of the screen containing the pointer, without taking keyboard focus. It recenters for each new appearance. Its orb, timer, and meter follow the actual recording. Silence does not generate artificial waveform activity.
 
 After recording stops, the same small bar shows transcription progress. Completion copies the transcript to the clipboard, plays the existing completion sound if enabled, and hides the bar immediately. The user presses ⌘V in their chosen application. There is no review panel, Enter-to-paste action, synthetic paste event, or Accessibility setup. A stale SmartPaste preference cannot require extra permissions.
 

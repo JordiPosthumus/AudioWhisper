@@ -9,7 +9,7 @@ A small, local macOS dictation app: speak, then paste with ⌘V.
 ## Daily use
 
 - Start dictation with your existing hotkey or press-and-hold shortcut.
-- A small floating orb appears immediately. Its ring and meter follow the actual microphone level.
+- A small floating orb appears immediately at the exact center of the screen containing your pointer. Its ring and meter follow the actual microphone level.
 - Stop recording. The bar shows transcription progress, then disappears automatically.
 - The completed text is copied to your clipboard. Press **⌘V** yourself wherever you want to paste. **Escape** cancels recording.
 - History, recording preferences, and launch at login live in a compact settings window.
@@ -22,7 +22,7 @@ SpeedyWhisper uses the existing local **Parakeet v2** installation on Apple Sili
 
 This is a personal build for an established AudioWhisper installation. It expects the existing cached `mlx-community/parakeet-tdt-0.6b-v2` model and app-managed Python environment. It does not include a new model-download wizard. macOS 14 or newer is required.
 
-The original bundle identifier and application-support paths remain in use to preserve history, preferences, and runtime compatibility. Current upgrades retain the established `/Applications/AudioWhisper.app` installation path while displaying SpeedyWhisper in the interface.
+The original bundle identifier and application-support paths remain in use to preserve history, preferences, and runtime compatibility. The installed app is `/Applications/SpeedyWhisper.app`. Its internal identifier and data folders keep their original names to retain existing history, preferences, and model files.
 
 ## Build
 
