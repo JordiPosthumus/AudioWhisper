@@ -120,7 +120,9 @@ internal class AudioRecorder: NSObject, ObservableObject {
             audioRecorder = try recorderFactory(audioFilename, settings)
             audioRecorder?.delegate = self
             audioRecorder?.isMeteringEnabled = true
-            audioRecorder?.record()
+            guard audioRecorder?.record() == true else {
+                throw CocoaError(.fileWriteUnknown)
+            }
             currentSessionStart = dateProvider()
             lastRecordingDuration = nil
             
@@ -129,6 +131,13 @@ internal class AudioRecorder: NSObject, ObservableObject {
             return true
         } catch {
             Logger.audioRecorder.error("Failed to start recording: \(error.localizedDescription)")
+            audioRecorder?.stop()
+            audioRecorder = nil
+            currentSessionStart = nil
+            lastRecordingDuration = nil
+            try? FileManager.default.removeItem(at: audioFilename)
+            recordingURL = nil
+            stopLevelMonitoring()
             // Restore volume if recording failed and we boosted it
             if UserDefaults.standard.autoBoostMicrophoneVolume {
                 Task {

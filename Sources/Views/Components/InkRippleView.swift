@@ -57,16 +57,18 @@ internal struct InkRippleView: View {
             guard isActive else { return }
             maybeSpawnRipple(level: newLevel)
         }
-        .onReceive(Timer.publish(every: 0.05, on: .main, in: .common).autoconnect()) { _ in
-            cleanupOldRipples()
+        .task(id: ripples.isEmpty) {
+            // Only schedule cleanup while there are ripples to expire.
+            // SwiftUI cancels this task when the view disappears or the last ripple fades.
+            while !ripples.isEmpty {
+                do { try await Task.sleep(for: .milliseconds(50)) }
+                catch { return }
+                guard !Task.isCancelled else { return }
+                cleanupOldRipples()
+            }
         }
         .onAppear {
             ripples = []
-        }
-        .onChange(of: isActive) { _, active in
-            if !active {
-                // Let existing ripples fade out naturally
-            }
         }
     }
     

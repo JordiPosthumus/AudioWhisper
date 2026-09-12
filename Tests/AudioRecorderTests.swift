@@ -135,6 +135,23 @@ final class AudioRecorderTests: XCTestCase {
         XCTAssertNil(recorder.currentSessionStart)
     }
     
+    func testRefusedRecordingCleansUpAndAllowsRetry() {
+        let mock = MockAVAudioRecorder()
+        mock.setShouldFailToRecord(true)
+        let recorder = makeRecorder(dates: [], recorderFactory: { _, _ in mock })
+        recorder.hasPermission = true
+
+        XCTAssertFalse(recorder.startRecording())
+        XCTAssertFalse(recorder.isRecording)
+        XCTAssertNil(recorder.currentSessionStart)
+        XCTAssertNil(recorder.stopRecording())
+
+        mock.setShouldFailToRecord(false)
+        recorder.hasPermission = true
+        XCTAssertTrue(recorder.startRecording(), "Failed starts must release the recorder")
+        recorder.cancelRecording()
+    }
+
     // MARK: - Helpers
     
     private func makeRecorder(

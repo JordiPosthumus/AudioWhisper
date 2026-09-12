@@ -36,11 +36,12 @@ internal class PermissionManager {
     var accessibilityPermissionState: PermissionState = .unknown
     var showEducationalModal = false
     var showRecoveryModal = false
+    private let defaults: UserDefaults
     private let isTestEnvironment: Bool
     private let accessibilityManager = AccessibilityPermissionManager()
     
     var allPermissionsGranted: Bool {
-        let enableSmartPaste = UserDefaults.standard.bool(forKey: "enableSmartPaste")
+        let enableSmartPaste = defaults.bool(forKey: "enableSmartPaste")
         if enableSmartPaste {
             return microphonePermissionState == .granted && accessibilityPermissionState == .granted
         } else {
@@ -48,7 +49,8 @@ internal class PermissionManager {
         }
     }
     
-    init() {
+    init(defaults: UserDefaults = .standard) {
+        self.defaults = defaults
         // Detect if running in tests
         isTestEnvironment = NSClassFromString("XCTestCase") != nil
     }
@@ -57,7 +59,7 @@ internal class PermissionManager {
         checkMicrophonePermission()
         
         // Only check Accessibility if SmartPaste is enabled
-        let enableSmartPaste = UserDefaults.standard.bool(forKey: "enableSmartPaste")
+        let enableSmartPaste = defaults.bool(forKey: "enableSmartPaste")
         if enableSmartPaste {
             checkAccessibilityPermission()
         } else {
@@ -91,7 +93,7 @@ internal class PermissionManager {
     }
     
     func requestPermissionWithEducation() {
-        let enableSmartPaste = UserDefaults.standard.bool(forKey: "enableSmartPaste")
+        let enableSmartPaste = defaults.bool(forKey: "enableSmartPaste")
         
         let needsMicrophone = microphonePermissionState.needsRequest
         let needsAccessibility = enableSmartPaste && accessibilityPermissionState.needsRequest
@@ -113,7 +115,7 @@ internal class PermissionManager {
                 try? await Task.sleep(for: .milliseconds(100))
                 // Simulate denied for consistent test behavior
                 self.microphonePermissionState = .denied
-                let enableSmartPaste = UserDefaults.standard.bool(forKey: "enableSmartPaste")
+                let enableSmartPaste = defaults.bool(forKey: "enableSmartPaste")
                 if enableSmartPaste {
                     self.accessibilityPermissionState = .denied
                 }
@@ -123,7 +125,7 @@ internal class PermissionManager {
             requestMicrophonePermission()
             
             // Only request Accessibility if SmartPaste is enabled
-            let enableSmartPaste = UserDefaults.standard.bool(forKey: "enableSmartPaste")
+            let enableSmartPaste = defaults.bool(forKey: "enableSmartPaste")
             if enableSmartPaste {
                 requestAccessibilityPermission()
             }

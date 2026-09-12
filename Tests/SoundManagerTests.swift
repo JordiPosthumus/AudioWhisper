@@ -4,18 +4,23 @@ import XCTest
 @MainActor
 final class SoundManagerTests: XCTestCase {
     
+    private var defaults: UserDefaults!
+    private var suiteName: String!
     private var soundProvider: MockSoundProvider!
     private var soundManager: SoundManager!
     
     override func setUp() {
         super.setUp()
+        suiteName = "SoundManagerTests.\(UUID().uuidString)"
+        defaults = UserDefaults(suiteName: suiteName)!
         soundProvider = MockSoundProvider()
-        soundManager = SoundManager(soundProvider: soundProvider)
-        UserDefaults.standard.removeObject(forKey: "playCompletionSound")
+        soundManager = SoundManager(soundProvider: soundProvider, defaults: defaults)
+        defaults.removeObject(forKey: "playCompletionSound")
     }
     
     override func tearDown() {
-        UserDefaults.standard.removeObject(forKey: "playCompletionSound")
+        defaults.removeObject(forKey: "playCompletionSound")
+        defaults.removePersistentDomain(forName: suiteName)
         soundManager = nil
         soundProvider = nil
         super.tearDown()
@@ -29,7 +34,7 @@ final class SoundManagerTests: XCTestCase {
     }
     
     func testPlayCompletionSound_WhenDisabledDoesNotPlay() {
-        UserDefaults.standard.set(false, forKey: "playCompletionSound")
+        defaults.set(false, forKey: "playCompletionSound")
         
         soundManager.playCompletionSound()
         
@@ -38,7 +43,7 @@ final class SoundManagerTests: XCTestCase {
     }
     
     func testPlayCompletionSound_WhenEnabledPlaysOnce() {
-        UserDefaults.standard.set(true, forKey: "playCompletionSound")
+        defaults.set(true, forKey: "playCompletionSound")
         
         soundManager.playCompletionSound()
         
@@ -54,7 +59,7 @@ final class SoundManagerTests: XCTestCase {
     }
     
     func testPlayRecordingStartSound_WhenDisabledDoesNotPlay() {
-        UserDefaults.standard.set(false, forKey: "playCompletionSound")
+        defaults.set(false, forKey: "playCompletionSound")
         
         soundManager.playRecordingStartSound()
         

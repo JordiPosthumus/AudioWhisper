@@ -5,9 +5,21 @@ import AppKit
 @MainActor
 final class PasteManagerTests: XCTestCase {
 
+    private var defaults: UserDefaults!
+    private var suiteName: String!
+    private var pasteboard: NSPasteboard!
+
+    override func setUp() {
+        super.setUp()
+        suiteName = "PasteManagerTests.\(UUID().uuidString)"
+        defaults = UserDefaults(suiteName: suiteName)!
+        pasteboard = NSPasteboard.withUniqueName()
+    }
+
     override func tearDown() {
-        UserDefaults.standard.removeObject(forKey: "enableSmartPaste")
-        NSPasteboard.general.clearContents()
+        defaults.removePersistentDomain(forName: suiteName)
+        pasteboard.releaseGlobally()
+        defaults.removeObject(forKey: "enableSmartPaste")
         super.tearDown()
     }
 
@@ -15,7 +27,8 @@ final class PasteManagerTests: XCTestCase {
 
     private func makeManager(permissionGranted: Bool) -> PasteManager {
         let manager = PasteManager(
-            accessibilityManager: AccessibilityPermissionManager(permissionCheck: { permissionGranted })
+            accessibilityManager: AccessibilityPermissionManager(permissionCheck: { permissionGranted }),
+            defaults: defaults, pasteboard: pasteboard
         )
         return manager
     }
@@ -23,7 +36,7 @@ final class PasteManagerTests: XCTestCase {
     // MARK: - Tests
 
     func testSmartPasteDisabledPostsFailureAndSkipsActivation() async throws {
-        UserDefaults.standard.set(false, forKey: "enableSmartPaste")
+        defaults.set(false, forKey: "enableSmartPaste")
 
         let mockApp = MockRunningApplication()
         let manager = makeManager(permissionGranted: true)
@@ -43,11 +56,11 @@ final class PasteManagerTests: XCTestCase {
 
         await fulfillment(of: [notificationReceived], timeout: 1.0)
         XCTAssertEqual(mockApp.mockActivationCount, 0)
-        XCTAssertEqual(NSPasteboard.general.string(forType: .string), "hello world")
+        XCTAssertEqual(pasteboard.string(forType: .string), "hello world")
     }
 
     func testSmartPasteFailsWhenPermissionDenied() async throws {
-        UserDefaults.standard.set(true, forKey: "enableSmartPaste")
+        defaults.set(true, forKey: "enableSmartPaste")
 
         let mockApp = MockRunningApplication()
         let manager = makeManager(permissionGranted: false)
@@ -69,7 +82,7 @@ final class PasteManagerTests: XCTestCase {
     }
 
     func testSmartPasteFailsForNilTargetApplication() async throws {
-        UserDefaults.standard.set(true, forKey: "enableSmartPaste")
+        defaults.set(true, forKey: "enableSmartPaste")
 
         let manager = makeManager(permissionGranted: true)
 
@@ -89,7 +102,7 @@ final class PasteManagerTests: XCTestCase {
     }
 
     func testSmartPasteAttemptsActivationThenFailsInsideTests() async throws {
-        UserDefaults.standard.set(true, forKey: "enableSmartPaste")
+        defaults.set(true, forKey: "enableSmartPaste")
 
         let mockApp = MockRunningApplication()
         let manager = makeManager(permissionGranted: true)
