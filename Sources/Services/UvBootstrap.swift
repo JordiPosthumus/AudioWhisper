@@ -177,31 +177,12 @@ internal struct UvBootstrap {
 
     @discardableResult
     private static func run(_ cmd: String, _ args: [String]) -> (String, String, Int32) {
-        let p = Process()
-        p.executableURL = URL(fileURLWithPath: cmd)
-        p.arguments = args
-        let outPipe = Pipe(); let errPipe = Pipe()
-        p.standardOutput = outPipe; p.standardError = errPipe
-        do { try p.run() } catch { return ("", String(describing: error), 1) }
-        p.waitUntilExit()
-        let out = String(data: outPipe.fileHandleForReading.readDataToEndOfFile(), encoding: .utf8) ?? ""
-        let err = String(data: errPipe.fileHandleForReading.readDataToEndOfFile(), encoding: .utf8) ?? ""
-        return (out, err, p.terminationStatus)
+        ProcessOutput.run(cmd, args)
     }
 
     @discardableResult
     private static func runInDir(_ cmd: String, _ args: [String], cwd: URL) -> (String, String, Int32) {
-        let p = Process()
-        p.currentDirectoryURL = cwd
-        p.executableURL = URL(fileURLWithPath: cmd)
-        p.arguments = args
-        let outPipe = Pipe(); let errPipe = Pipe()
-        p.standardOutput = outPipe; p.standardError = errPipe
-        do { try p.run() } catch { return ("", String(describing: error), 1) }
-        p.waitUntilExit()
-        let out = String(data: outPipe.fileHandleForReading.readDataToEndOfFile(), encoding: .utf8) ?? ""
-        let err = String(data: errPipe.fileHandleForReading.readDataToEndOfFile(), encoding: .utf8) ?? ""
-        return (out, err, p.terminationStatus)
+        ProcessOutput.run(cmd, args, directory: cwd)
     }
 
     private static func copyIfDifferent(src: URL, dst: URL) throws {

@@ -1,4 +1,5 @@
 import Foundation
+import Darwin
 import os.log
 
 internal enum MLDaemonError: Error, LocalizedError {
@@ -36,8 +37,10 @@ internal actor MLDaemonManager {
 
     private let logger = Logger(subsystem: "com.audiowhisper.app", category: "MLDaemon")
     private let maxRestartAttempts = 3
+    private let inputQueue = DispatchQueue(label: "com.audiowhisper.daemon-input")
 
     private var process: Process?
+    private var processGeneration: UUID?
     private var stdinPipe: Pipe?
     private var stdoutPipe: Pipe?
     private var stderrPipe: Pipe?
@@ -74,8 +77,9 @@ internal actor MLDaemonManager {
     }
 
     func warmup(type: String, repo: String) async throws {
-        struct WarmupResult: Decodable { let success: Bool? }
-        _ = try await sendRequest(method: "warmup", params: ["type": type, "repo": repo]) as WarmupResult
+        struct WarmupResult: Decodable { let success: Bool; let error: String? }
+        let result: WarmupResult = try await sendRequest(method: "warmup", params: ["type": type, "repo": repo])
+        guard result.success else { throw MLDaemonError.remoteError(result.error ?? "Warmup failed") }
     }
 
     func ping() async -> Bool {
@@ -92,15 +96,12 @@ internal actor MLDaemonManager {
     // MARK: - Core JSON-RPC plumbing
 
     private func sendRequest<Response: Decodable>(method: String, params: [String: Any]) async throws -> Response {
+        try Task.checkCancellation()
 #if DEBUG
         if let testResponder {
             let resultObject = try testResponder(method, params)
-            let data = try JSONSerialization.data(withJSONObject: resultObject, options: [])
-            do {
-                return try JSONDecoder().decode(Response.self, from: data)
-            } catch {
-                throw MLDaemonError.invalidResponse(error.localizedDescription)
-            }
+            let data = try JSONSerialization.data(withJSONObject: resultObject, options: [.fragmentsAllowed])
+            return try decodeResponse(data)
         }
 #endif
         try ensureDaemonRunning()
@@ -117,29 +118,52 @@ internal actor MLDaemonManager {
             payload["params"] = params
         }
 
-        let data = try JSONSerialization.data(withJSONObject: payload, options: [])
+        var data = try JSONSerialization.data(withJSONObject: payload, options: [])
+        data.append(0x0a)
         guard let writer = stdinPipe?.fileHandleForWriting else {
             throw MLDaemonError.daemonUnavailable("stdin unavailable")
         }
 
-        writer.write(data)
-        writer.write(Data([0x0a])) // newline
+        let response = try await waitForResponse(id: requestID, frame: data, writer: writer)
+        return try decodeResponse(response)
+    }
 
-        return try await withCheckedThrowingContinuation { (continuation: CheckedContinuation<Response, Error>) in
-            pending[requestID] = PendingRequest { result in
-                switch result {
-                case .success(let responseData):
+    private func decodeResponse<Response: Decodable>(_ data: Data) throws -> Response {
+        do { return try JSONDecoder().decode(Response.self, from: data) }
+        catch { throw MLDaemonError.invalidResponse(error.localizedDescription) }
+    }
+
+    private func waitForResponse(id: Int, frame: Data, writer: FileHandle) async throws -> Data {
+        try await withTaskCancellationHandler {
+            try await withCheckedThrowingContinuation { continuation in
+                // Cancellation can arrive before the continuation is installed.
+                guard !Task.isCancelled else {
+                    continuation.resume(throwing: CancellationError())
+                    return
+                }
+                pending[id] = PendingRequest { continuation.resume(with: $0) }
+                // A busy daemon may fill stdin. Keep blocking pipe writes off the actor,
+                // while serializing whole frames so concurrent requests cannot interleave.
+                inputQueue.async { [weak self] in
                     do {
-                        let decoded = try JSONDecoder().decode(Response.self, from: responseData)
-                        continuation.resume(returning: decoded)
+                        try writer.write(contentsOf: frame)
                     } catch {
-                        continuation.resume(throwing: MLDaemonError.invalidResponse(error.localizedDescription))
+                        Task { await self?.failWrite(id) }
                     }
-                case .failure(let error):
-                    continuation.resume(throwing: error)
                 }
             }
+        } onCancel: {
+            Task { await self.cancelRequest(id) }
         }
+    }
+
+    private func failWrite(_ id: Int) {
+        pending.removeValue(forKey: id)?.completion(.failure(MLDaemonError.writeFailed))
+    }
+
+    private func cancelRequest(_ id: Int) {
+        // Detach the caller without restarting the daemon or discarding its loaded models.
+        pending.removeValue(forKey: id)?.completion(.failure(CancellationError()))
     }
 
     private func handle(line: String) {
@@ -172,7 +196,7 @@ internal actor MLDaemonManager {
         }
 
         do {
-            let resultData = try JSONSerialization.data(withJSONObject: result, options: [])
+            let resultData = try JSONSerialization.data(withJSONObject: result, options: [.fragmentsAllowed])
             pendingRequest.completion(.success(resultData))
         } catch {
             pendingRequest.completion(.failure(MLDaemonError.invalidResponse(error.localizedDescription)))
@@ -182,10 +206,17 @@ internal actor MLDaemonManager {
     // MARK: - Process lifecycle
 
     private func ensureDaemonRunning() throws {
-        if let process, process.isRunning { return }
         guard !isShuttingDown else { throw MLDaemonError.daemonUnavailable("shutting down") }
+        if let process, process.isRunning { return }
         guard restartAttempts < maxRestartAttempts else { throw MLDaemonError.restartLimitReached }
-        try startProcess(isRestart: false)
+        let isRestart = process != nil
+        if isRestart {
+            closePipes()
+            completeAllPending(with: MLDaemonError.daemonUnavailable("process exited"))
+            process = nil
+            processGeneration = nil
+        }
+        try startProcess(isRestart: isRestart)
     }
 
     private func startProcess(isRestart: Bool) throws {
@@ -204,17 +235,25 @@ internal actor MLDaemonManager {
         let stdout = Pipe()
         let stderr = Pipe()
 
+        // A closed child pipe must throw a write error, not deliver SIGPIPE to the app.
+        guard fcntl(stdin.fileHandleForWriting.fileDescriptor, F_SETNOSIGPIPE, 1) != -1 else {
+            throw MLDaemonError.writeFailed
+        }
         proc.standardInput = stdin
         proc.standardOutput = stdout
         proc.standardError = stderr
 
+        let generation = UUID()
         proc.terminationHandler = { [weak self] process in
-            Task { await self?.processTerminated(exitCode: process.terminationStatus) }
+            Task { await self?.processTerminated(exitCode: process.terminationStatus, generation: generation) }
         }
 
         stderr.fileHandleForReading.readabilityHandler = { [weak self] handle in
             let data = handle.availableData
-            guard !data.isEmpty else { return }
+            guard !data.isEmpty else {
+                handle.readabilityHandler = nil
+                return
+            }
             let message = String(decoding: data, as: UTF8.self)
             self?.logger.error("ml_daemon stderr: \(message, privacy: .public)")
         }
@@ -226,6 +265,7 @@ internal actor MLDaemonManager {
         }
 
         process = proc
+        processGeneration = generation
         stdinPipe = stdin
         stdoutPipe = stdout
         stderrPipe = stderr
@@ -250,7 +290,10 @@ internal actor MLDaemonManager {
         }
     }
 
-    private func processTerminated(exitCode: Int32) async {
+    private func processTerminated(exitCode: Int32, generation: UUID) async {
+        // A delayed termination callback from an old process must not close a replacement's pipes.
+        guard generation == processGeneration else { return }
+        processGeneration = nil
         logger.error("ml_daemon exited with code \(exitCode)")
         closePipes()
 
@@ -287,9 +330,10 @@ internal actor MLDaemonManager {
 
     func shutdown() async {
         isShuttingDown = true
-        closePipes()
         process?.terminate()
+        closePipes()
         process = nil
+        processGeneration = nil
         completeAllPending(with: MLDaemonError.daemonUnavailable("shutdown"))
     }
 
@@ -327,6 +371,9 @@ internal actor MLDaemonManager {
 
 #if DEBUG
 internal extension MLDaemonManager {
+    var pendingRequestCountForTesting: Int { pending.count }
+    var processIdentifierForTesting: Int32? { process?.processIdentifier }
+
     func setTestResponder(_ responder: ((String, [String: Any]) throws -> Any)?) {
         testResponder = responder
     }
