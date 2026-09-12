@@ -4,6 +4,7 @@ from __future__ import annotations
 
 import json
 import sys
+from contextlib import redirect_stdout
 from typing import Any, Dict
 
 from .correction import correct
@@ -16,59 +17,54 @@ def _respond(payload: Dict[str, Any]) -> None:
     sys.stdout.flush()
 
 
-def _handle_request(request: Dict[str, Any]) -> None:
-    req_id = request.get("id")
-    method = request.get("method")
-    params = request.get("params") or {}
+def _execute(method: str, params: Dict[str, Any]) -> Dict[str, Any]:
+    if method == "ping":
+        return {"pong": True}
+    if method == "transcribe":
+        repo = params.get("repo") or DEFAULT_PARAKEET_REPO
+        pcm_path = params.get("pcm_path")
+        if not pcm_path:
+            raise ValueError("pcm_path is required for transcribe")
+        return transcribe(repo, pcm_path)
+    if method == "correct":
+        repo = params.get("repo")
+        text = params.get("text")
+        if not repo:
+            raise ValueError("repo is required for correct")
+        if text is None:
+            raise ValueError("text is required for correct")
+        return correct(repo, text, params.get("prompt"))
+    if method == "warmup":
+        warm_type = params.get("type")
+        repo = params.get("repo")
+        if not warm_type or not repo:
+            raise ValueError("warmup requires 'type' and 'repo'")
+        if warm_type == "parakeet":
+            load_parakeet_model(repo)
+        elif warm_type in ("mlx", "correction"):
+            load_correction_model(repo)
+        else:
+            raise ValueError(f"Unknown warmup type: {warm_type}")
+        return {"success": True}
+    raise ValueError(f"Unknown method: {method}")
 
+
+def _handle_request(request: Any) -> None:
+    req_id = request.get("id") if isinstance(request, dict) else None
     try:
-        if method == "ping":
-            _respond({"jsonrpc": "2.0", "id": req_id, "result": {"pong": True}})
-            return
-
-        if method == "transcribe":
-            repo = params.get("repo") or DEFAULT_PARAKEET_REPO
-            pcm_path = params.get("pcm_path")
-            if not pcm_path:
-                raise ValueError("pcm_path is required for transcribe")
-            result = transcribe(repo, pcm_path)
-            _respond({"jsonrpc": "2.0", "id": req_id, "result": result})
-            return
-
-        if method == "correct":
-            repo = params.get("repo")
-            text = params.get("text")
-            prompt = params.get("prompt")
-            if not repo:
-                raise ValueError("repo is required for correct")
-            if text is None:
-                raise ValueError("text is required for correct")
-            result = correct(repo, text, prompt)
-            _respond({"jsonrpc": "2.0", "id": req_id, "result": result})
-            return
-
-        if method == "warmup":
-            warm_type = params.get("type")
-            repo = params.get("repo")
-            if not warm_type or not repo:
-                raise ValueError("warmup requires 'type' and 'repo'")
-            if warm_type == "parakeet":
-                load_parakeet_model(repo)
-            elif warm_type in ("mlx", "correction"):
-                load_correction_model(repo)
-            else:
-                raise ValueError(f"Unknown warmup type: {warm_type}")
-            _respond({"jsonrpc": "2.0", "id": req_id, "result": {"success": True}})
-            return
-
-        raise ValueError(f"Unknown method: {method}")
+        if not isinstance(request, dict):
+            raise ValueError("Request must be an object")
+        params = request.get("params")
+        if params is None:
+            params = {}
+        if not isinstance(params, dict):
+            raise ValueError("params must be an object")
+        # Model libraries may print progress; stdout is reserved for RPC frames.
+        with redirect_stdout(sys.stderr):
+            result = _execute(request.get("method"), params)
+        _respond({"jsonrpc": "2.0", "id": req_id, "result": result})
     except Exception as exc:
-        error_payload = {
-            "jsonrpc": "2.0",
-            "id": req_id,
-            "error": {"message": str(exc)},
-        }
-        _respond(error_payload)
+        _respond({"jsonrpc": "2.0", "id": req_id, "error": {"message": str(exc)}})
 
 
 def main() -> int:
@@ -78,15 +74,7 @@ def main() -> int:
         try:
             request = json.loads(line)
         except json.JSONDecodeError as exc:
-            _respond(
-                {
-                    "jsonrpc": "2.0",
-                    "id": None,
-                    "error": {"message": f"Invalid JSON: {exc}"},
-                }
-            )
+            _respond({"jsonrpc": "2.0", "id": None, "error": {"message": f"Invalid JSON: {exc}"}})
             continue
-
         _handle_request(request)
     return 0
-
