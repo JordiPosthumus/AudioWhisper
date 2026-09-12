@@ -2,8 +2,8 @@ import AppKit
 
 internal enum TranscriptPresentation {
     static let width: CGFloat = 380
-    static let compactHeight: CGFloat = 112
-    static let liveHeight: CGFloat = 180
+    static let compactHeight: CGFloat = 126
+    static let liveHeight: CGFloat = 194
 
     /// Short phrases flash briefly; longer text gets time to scan without a persistent panel.
     static func duration(for text: String) -> TimeInterval {

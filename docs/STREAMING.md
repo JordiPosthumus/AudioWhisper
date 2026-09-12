@@ -16,13 +16,13 @@ Each recording has a session UUID and ordered packet sequence. Late packets and 
 
 ## Presentation
 
-A 380 × 180 point live display shows the last two lines of draft text and a waveform built from 48 actual microphone-level readings at the recorder's existing 10 Hz metering rate. In streaming-off mode the display is 380 × 112. The Knight Rider–inspired red scanner moves a decorative light across the waveform at 24 fps; bar height still reflects actual microphone levels, including during silence. The effect uses one 340 × 37 point canvas, 32 segments, and gradient light without particle systems or blur passes. Its animation timeline exists only while recording and is omitted with Reduce Motion enabled. The display stays geometrically centered as its size changes.
+A 380 × 194 point live display shows the last two lines of draft text and a waveform built from 48 actual microphone-level readings at the recorder's existing 10 Hz metering rate. In streaming-off mode the display is 380 × 126. The KITT-inspired voice modulator has three centered columns of 20 red LED segments. The center column follows the present microphone level, and the flanks use short averages of real readings. Lights expand above and below the center with speech. A single 340 × 51 point canvas updates only from the existing 10 Hz audio meter, with no animation timeline, particles, or blur passes. Silence leaves only faint unlit segments. These are visual level envelopes, not frequency bands. The display stays geometrically centered as its size changes.
 
 The final text displays for `clamp(0.65 + words × 0.045, 0.85, 6)` seconds, with a single completion glow/check animation. Its text area is bounded for long transcripts. Starting another recording or dismissing the display cancels its previous dismissal task. No auto-paste or required confirmation key is introduced.
 
 ## Validation on this Mac
 
-The 210.10 scanner was measured in an isolated optimized SwiftUI preview with 10 Hz changing meter fixtures: 0.493 CPU seconds over eight seconds of animation (6.16% of one CPU core), and 0.00443 CPU seconds over four idle seconds (0.11% of one core). This measures the preview process, not the separate WindowServer/GPU or transcription workload. No microphone or model was used for this graphics check.
+The 210.11 voice display was measured in an isolated optimized SwiftUI preview with changing 10 Hz meter fixtures: 0.15284 CPU seconds over eight active seconds (1.91% of one CPU core), and 0.00405 CPU seconds over four idle seconds (0.10% of one core). This measures the preview process, not the separate WindowServer/GPU or transcription workload. No microphone or model was used for this graphics check.
 
 On two local dictation recordings of about eight seconds each, the former streaming approximation produced badly incorrect text; normal rolling-window decoding recovered the spoken sentences. Median preview computation was 0.128 and 0.099 seconds respectively, with a maximum of 0.276 seconds. These figures exclude capture/buffering time and are not a general accuracy benchmark. The recordings and their transcripts are not included in the repository.
 

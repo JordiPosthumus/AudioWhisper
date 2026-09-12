@@ -35,7 +35,7 @@ internal struct FloatingRecorderView: View {
                 finalTranscript(finalText)
             } else {
                 VoiceRibbon(levels: levels, active: recording)
-                    .frame(height: 37)
+                    .frame(height: 51)
                     .padding(.horizontal, 20)
                     .padding(.top, 9)
                     .padding(.bottom, streaming ? 9 : 12)
@@ -160,72 +160,63 @@ internal enum AudioLevelDisplay {
     }
 }
 
+/// Three centered LED columns inspired by KITT's dashboard voice modulator.
+/// This view updates only with the existing microphone meter; it has no clock.
 internal struct VoiceRibbon: View {
     let levels: [Double]
     let active: Bool
-    @Environment(\.accessibilityReduceMotion) private var reduceMotion
 
-    var body: some View {
-        Group {
-            if active && !reduceMotion {
-                // Redraw only this small canvas. No particles, blur passes, or
-                // perpetual work once recording stops. Audio still meters at 10 Hz.
-                TimelineView(.animation(minimumInterval: 1.0 / 24.0)) { timeline in
-                    scanner(at: timeline.date.timeIntervalSinceReferenceDate)
-                }
-            } else {
-                scanner(at: nil)
-            }
-        }
-        .accessibilityElement(children: .ignore).accessibilityLabel("Microphone waveform")
+    private func recentLevel(_ count: Int) -> Double {
+        let samples = levels.suffix(count)
+        guard active, !samples.isEmpty else { return 0 }
+        return min(1, max(0, samples.reduce(0, +) / Double(samples.count)))
     }
 
-    private func scanner(at time: TimeInterval?) -> some View {
+    var body: some View {
         Canvas { context, size in
-            let count = 32
-            let pitch = size.width / Double(count)
-            let phase = (time ?? 0) * (2 * Double.pi / 3.2)
-            let head = time == nil ? 0.5 : 0.5 + 0.46 * sin(phase)
-            let direction = cos(phase) >= 0 ? 1.0 : -1.0
-            let voice = active ? (levels.suffix(6).max() ?? 0) : 0
-            let red = Color(red: 1, green: 0.08, blue: 0.12)
-            let lamp = Gradient(colors: [
-                Color(red: 1, green: 0.30, blue: 0.25), red, Color(red: 0.60, green: 0.015, blue: 0.08)
-            ])
+            let rows = 20
+            let columnWidth = 18.0
+            let gap = 7.0
+            let width = columnWidth * 3 + gap * 2
+            let origin = (size.width - width) / 2
+            let pitch = (size.height - 2) / Double(rows)
+            let red = Color(red: 1, green: 0.065, blue: 0.09)
+            let voice = recentLevel(1)
+            // Center follows the present syllable; the flanks use a short envelope
+            // of real readings. These are visual envelopes, not frequency bands.
+            let envelopes = [recentLevel(2) * 0.76, voice, recentLevel(3) * 0.76]
+            let lamp = Gradient(colors: [Color(red: 1, green: 0.31, blue: 0.22), red,
+                                         Color(red: 0.75, green: 0.015, blue: 0.055)])
 
-            // A gradient supplies the halo without an offscreen blur texture.
-            if active {
-                let center = CGPoint(x: head * size.width, y: size.height / 2)
-                context.fill(Path(ellipseIn: CGRect(x: center.x - 55, y: center.y - 18, width: 110, height: 36)),
-                    with: .radialGradient(Gradient(colors: [red.opacity(0.11 + voice * 0.10), .clear]),
-                        center: center, startRadius: 0, endRadius: 55))
+            // Fine, stationary rails frame the voice box without filling the width.
+            for side in [0, 1] {
+                let x = side == 0 ? origin - 10 : origin + width + 9
+                context.fill(Path(CGRect(x: x, y: 1, width: 1, height: size.height - 2)),
+                             with: .color(red.opacity(0.10)))
             }
-
-            for index in 0..<count {
-                let position = (Double(index) + 0.5) / Double(count)
-                let distance = abs(position - head)
-                let behind = (head - position) * direction >= 0
-                let core = exp(-pow(distance * 21, 2))
-                let trail = exp(-distance * (behind ? 14 : 48))
-                let scanner = active ? min(1, core * 0.8 + trail * 0.4) : 0
-                let sampleIndex = min(levels.count - 1, index * levels.count / count)
-                let level = active && sampleIndex >= 0 ? levels[sampleIndex] : 0
-                // Height is driven only by captured voice levels; the scanner is light.
-                let height = 4 + pow(level, 1.4) * (size.height - 10)
-                let rect = CGRect(x: Double(index) * pitch + 1.6, y: (size.height - height) / 2,
-                                  width: max(1, pitch - 3.2), height: height)
-                let shape = Path(roundedRect: rect, cornerRadius: 1.5)
-                var segment = context
-                segment.opacity = active ? min(0.96, 0.10 + scanner * (0.61 + voice * 0.24) + level * 0.12) : 0.05
-                segment.fill(shape, with: .linearGradient(lamp,
-                    startPoint: CGPoint(x: rect.midX, y: rect.minY), endPoint: CGPoint(x: rect.midX, y: rect.maxY)))
-                if scanner > 0.3 {
-                    let filament = CGRect(x: rect.minX + 1, y: rect.midY - 0.7,
-                                          width: max(1, rect.width - 2), height: 1.4)
-                    context.fill(Path(roundedRect: filament, cornerRadius: 0.7),
-                        with: .color(Color(red: 1, green: 0.72, blue: 0.56).opacity(scanner * (0.35 + voice * 0.5))))
+            for column in 0..<3 {
+                let strength = pow(envelopes[column], 1.1)
+                let litPairs = Int((strength * Double(rows / 2)).rounded())
+                let x = origin + Double(column) * (columnWidth + gap)
+                if litPairs > 0 {
+                    let center = CGPoint(x: x + columnWidth / 2, y: size.height / 2)
+                    context.fill(Path(ellipseIn: CGRect(x: x - 9, y: 0, width: columnWidth + 18, height: size.height)),
+                        with: .radialGradient(Gradient(colors: [red.opacity(strength * 0.15), .clear]),
+                            center: center, startRadius: 0, endRadius: size.height / 2))
+                }
+                for row in 0..<rows {
+                    let distance = abs(Double(row) - Double(rows - 1) / 2)
+                    let lit = distance < Double(litPairs)
+                    let rect = CGRect(x: x, y: 1 + Double(row) * pitch,
+                                      width: columnWidth, height: max(1, pitch - 0.8))
+                    var light = context
+                    light.opacity = lit ? 0.76 + strength * 0.24 : 0.045
+                    light.fill(Path(roundedRect: rect, cornerRadius: 0.35), with: .linearGradient(lamp,
+                        startPoint: CGPoint(x: rect.midX, y: rect.minY),
+                        endPoint: CGPoint(x: rect.midX, y: rect.maxY)))
                 }
             }
         }
+        .accessibilityElement(children: .ignore).accessibilityLabel("Microphone voice level")
     }
 }
