@@ -5,6 +5,7 @@ final class MockRunningApplication: NSRunningApplication {
     var mockIsTerminated: Bool = false
     var mockActivationCount: Int = 0
     var mockIsActive = false
+    var activationHandler: (() -> Bool)?
     var mockProcessIdentifier: pid_t = 123
 
     override var isActive: Bool { mockIsActive }
@@ -14,7 +15,7 @@ final class MockRunningApplication: NSRunningApplication {
 
     override func activate(options: NSApplication.ActivationOptions = []) -> Bool {
         mockActivationCount += 1
-        return true
+        return activationHandler?() ?? true
     }
 }
 

@@ -95,7 +95,7 @@ final class KeyboardEventHandlerTests: XCTestCase {
         XCTAssertNil(result, "Command+Comma should be consumed to open dashboard")
     }
 
-    func testOtherCommandShortcutsAreBlocked() {
+    func testNativeCopyShortcutPassesThrough() {
         guard let event = keyEvent(characters: "c", modifiers: [.command], keyCode: 8) else {
             XCTFail("Failed to create key event")
             return
@@ -103,7 +103,7 @@ final class KeyboardEventHandlerTests: XCTestCase {
 
         let result = handler.handleKeyEvent(event, for: window)
 
-        XCTAssertNil(result, "Command-modified keys should be blocked when recording window is visible")
+        XCTAssertNotNil(result, "Command+C must reach native transcript selection")
     }
 
     func testNonCommandKeysPassThrough() {

@@ -15,6 +15,10 @@ internal struct ContentView: View {
     @State var showError = false
     @State var errorMessage = ""
     @State var showSuccess = false
+    @State var previewText = ""
+    @State var pasteMessage: String?
+    @State var isPasting = false
+    @State var pasteTask: Task<Void, Never>?
     @State var isHovered = false
     @State var isHandlingSpaceKey = false
     @State var processingTask: Task<Void, Never>?
@@ -44,25 +48,21 @@ internal struct ContentView: View {
     }
     
     var body: some View {
-        WaveformRecordingView(
+        FloatingRecorderView(
             status: statusViewModel.currentStatus,
             audioLevel: audioRecorder.audioLevel,
-            onTap: {
-                if audioRecorder.isRecording {
-                    stopAndProcess()
-                } else if showSuccess {
-                    let enableSmartPaste = UserDefaults.standard.bool(forKey: "enableSmartPaste")
-                    if enableSmartPaste {
-                        performUserTriggeredPaste()
-                    } else {
-                        showSuccess = false
-                    }
-                } else if !audioRecorder.hasPermission {
-                    permissionManager.requestPermissionWithEducation()
-                } else {
-                    startRecording()
-                }
-            }
+            recordingStartedAt: audioRecorder.currentSessionStart,
+            transcript: showSuccess ? previewText : nil,
+            targetName: findValidTargetApp()?.localizedName,
+            message: pasteMessage,
+            isPasting: isPasting,
+            onPrimaryAction: {
+                if audioRecorder.isRecording { stopAndProcess() }
+                else if !isProcessing { startRecording() }
+            },
+            onCopy: copyPreview,
+            onPaste: performUserTriggeredPaste,
+            onDismiss: dismissRecorder
         )
         .sheet(isPresented: $permissionManager.showEducationalModal) {
             PermissionEducationModal(
@@ -89,8 +89,10 @@ internal struct ContentView: View {
         .focusable(false)
         .onAppear { handleOnAppear() }
         .onDisappear { handleOnDisappear() }
-        .onChange(of: audioRecorder.isRecording) { _, _ in
+        .onChange(of: audioRecorder.isRecording) { _, isRecording in
+            if isRecording { recordingSessionDidStart() }
             updateStatus()
+            updateRecordingWindowSize()
         }
         .onChange(of: isProcessing) { _, _ in
             updateStatus()
@@ -103,7 +105,9 @@ internal struct ContentView: View {
         }
         .onChange(of: showSuccess) { _, _ in
             updateStatus()
+            updateRecordingWindowSize()
         }
+        .onChange(of: pasteMessage) { _, _ in updateRecordingWindowSize() }
         .onChange(of: showError) { _, newValue in
             updateStatus()
             if newValue {

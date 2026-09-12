@@ -57,6 +57,7 @@ internal extension AppDelegate {
 
         if recorder.startRecording() {
             isHoldRecordingActive = true
+            showRecordingIndicator()
             updateMenuBarIcon(isRecording: true)
             SoundManager().playRecordingStartSound()
         } else {
@@ -119,6 +120,7 @@ internal extension AppDelegate {
                 }
 
                 if recorder.startRecording() {
+                    showRecordingIndicator()
                     updateMenuBarIcon(isRecording: true)
                     SoundManager().playRecordingStartSound()
                 } else {

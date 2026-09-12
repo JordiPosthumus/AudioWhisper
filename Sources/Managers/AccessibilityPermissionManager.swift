@@ -51,30 +51,8 @@ internal class AccessibilityPermissionManager {
         if isTestEnvironment { completion(false); return }
         Task { @MainActor in
             let alert = NSAlert()
-            alert.messageText = "Accessibility Permission Required for SmartPaste"
-            alert.informativeText = """
-            SpeedyWhisper's SmartPaste feature needs Accessibility permission to automatically paste transcribed text into your applications.
-            
-            🎯 What SmartPaste Does:
-            • Automatically pastes transcribed text into the app you were using before recording
-            • Switches focus back to your original application seamlessly
-            • Provides a hands-free voice-to-text workflow
-            
-            🔒 Privacy Protection:
-            • SpeedyWhisper ONLY sends paste commands (⌘V) to applications
-            • It never reads, monitors, or accesses content from other applications
-            • No screen recording or keylogging occurs
-            • All transcription happens locally on your device
-            
-            ⚙️ What Happens Next:
-            • Click "Grant Permission" to open System Settings
-            • Find SpeedyWhisper in Privacy & Security → Accessibility
-            • Toggle the switch to enable the permission
-            • Return to SpeedyWhisper to use SmartPaste
-            
-            ✋ Alternative:
-            If you prefer manual control, click "Continue Without SmartPaste" and use ⌘V to paste transcribed text yourself.
-            """
+            alert.messageText = "Allow SpeedyWhisper to paste"
+            alert.informativeText = "Enable SpeedyWhisper in System Settings → Privacy & Security → Accessibility to paste when you press Enter or click Paste. Your transcript is already copied, so you can also use ⌘V yourself."
             alert.alertStyle = .informational
             alert.addButton(withTitle: "Grant Permission")
             alert.addButton(withTitle: "Continue Without SmartPaste")

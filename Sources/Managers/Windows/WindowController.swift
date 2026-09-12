@@ -54,6 +54,14 @@ internal class WindowController {
         }
     }
     
+    /// Show live recording feedback without taking keyboard focus from the user's app.
+    func showRecordingIndicator(_ window: NSWindow) {
+        guard !isTestEnvironment else { return }
+        storePreviousApp()
+        window.level = .modalPanel
+        window.orderFrontRegardless()
+    }
+
     private func hideWindow(_ window: NSWindow, completion: (() -> Void)? = nil) {
         window.orderOut(nil)
         restoreFocusToPreviousApp(completion: completion)

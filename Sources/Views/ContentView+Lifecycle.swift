@@ -1,12 +1,14 @@
 import SwiftUI
 import AppKit
 
+@MainActor
 internal extension ContentView {
     func handleOnAppear() {
         audioRecorder.checkMicrophonePermission()
         setupNotificationObservers()
         permissionManager.checkPermissionState()
         updateStatus()
+        updateRecordingWindowSize()
     }
     
     func handleOnDisappear() {
@@ -58,27 +60,7 @@ internal extension ContentView {
             queue: .main
         ) { _ in
             Task { @MainActor in
-                if audioRecorder.isRecording {
-                    audioRecorder.cancelRecording()
-                    isProcessing = false
-                } else if isProcessing {
-                    processingTask?.cancel()
-                    isProcessing = false
-                } else {
-                    let recordWindow = NSApp.windows.first { window in
-                        window.title == AppBrand.recordingWindowTitle
-                    }
-                    
-                    if let window = recordWindow {
-                        window.orderOut(nil)
-                    } else {
-                        NSApplication.shared.keyWindow?.orderOut(nil)
-                    }
-                    
-                    NotificationCenter.default.post(name: .restoreFocusToPreviousApp, object: nil)
-                    
-                    showSuccess = false
-                }
+                dismissRecorder()
             }
         }
         
@@ -88,12 +70,7 @@ internal extension ContentView {
             queue: .main
         ) { _ in
             Task { @MainActor in
-                if showSuccess {
-                    let enableSmartPaste = UserDefaults.standard.bool(forKey: "enableSmartPaste")
-                    if enableSmartPaste {
-                        performUserTriggeredPaste()
-                    }
-                }
+                if showSuccess { performUserTriggeredPaste() }
             }
         }
         
@@ -117,18 +94,6 @@ internal extension ContentView {
             Task { @MainActor in
                 errorMessage = LocalizedStrings.Errors.failedToStartRecording
                 showError = true
-            }
-        }
-        
-        windowFocusObserver = NotificationCenter.default.addObserver(
-            forName: NSWindow.didBecomeKeyNotification,
-            object: nil,
-            queue: .main
-        ) { _ in
-            DispatchQueue.main.asyncAfter(deadline: .now() + 0.05) {
-                if let window = NSApp.keyWindow {
-                    window.makeFirstResponder(window.contentView)
-                }
             }
         }
         

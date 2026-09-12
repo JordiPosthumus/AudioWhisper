@@ -11,6 +11,12 @@ internal extension AppDelegate {
         windowController.toggleRecordWindow(recordingWindow)
     }
 
+    func showRecordingIndicator() {
+        if recordingWindow == nil { createRecordingWindow() }
+        guard let window = recordingWindow else { return }
+        windowController.showRecordingIndicator(window)
+    }
+
     func showRecordingWindowForProcessing(completion: (() -> Void)? = nil) {
         if recordingWindow == nil {
             createRecordingWindow()
@@ -37,7 +43,7 @@ internal extension AppDelegate {
         }
 
         let windowSize = LayoutMetrics.RecordingWindow.size
-        let window = NSWindow(
+        let window = ChromelessWindow(
             contentRect: NSRect(origin: .zero, size: windowSize),
             styleMask: [.borderless],
             backing: .buffered,
@@ -57,8 +63,14 @@ internal extension AppDelegate {
         let contentView = ContentView(audioRecorder: recorder)
             .modelContainer(DataManager.shared.sharedModelContainer ?? createFallbackModelContainer())
 
-        window.contentView = NSHostingView(rootView: contentView)
-        window.center()
+        let hostingView = NSHostingView(rootView: contentView)
+        hostingView.sizingOptions = []
+        window.contentView = hostingView
+        if let screen = NSScreen.screens.first(where: { NSMouseInRect(NSEvent.mouseLocation, $0.frame, false) }) ?? NSScreen.main {
+            let visible = screen.visibleFrame
+            window.setFrameOrigin(NSPoint(x: visible.midX - windowSize.width / 2, y: visible.minY + 36))
+        }
+        window.isReleasedWhenClosed = false
 
         window.standardWindowButton(.closeButton)?.isHidden = true
         window.standardWindowButton(.miniaturizeButton)?.isHidden = true

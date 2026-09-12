@@ -5,7 +5,7 @@ import Carbon
 import Observation
 
 /// Errors that can occur during paste operations
-internal enum PasteError: LocalizedError {
+internal enum PasteError: LocalizedError, Equatable {
     case accessibilityPermissionDenied
     case eventSourceCreationFailed
     case keyboardEventCreationFailed
@@ -32,17 +32,59 @@ internal class PasteManager {
     private let defaults: UserDefaults
     private let pasteboard: NSPasteboard
     private let accessibilityManager: AccessibilityPermissionManager
+    private let eventPoster: (() throws -> Void)?
     
     init(
         accessibilityManager: AccessibilityPermissionManager = AccessibilityPermissionManager(),
         defaults: UserDefaults = .standard,
-        pasteboard: NSPasteboard = .general
+        pasteboard: NSPasteboard = .general,
+        eventPoster: (() throws -> Void)? = nil
     ) {
         self.defaults = defaults
         self.pasteboard = pasteboard
         self.accessibilityManager = accessibilityManager
+        self.eventPoster = eventPoster
     }
     
+    /// An explicit Paste action is independent of the legacy automatic-paste preference.
+    /// Permission is resolved before activating the captured app; cancellation never posts a key.
+    func pasteReviewedText(_ text: String, into target: NSRunningApplication?) async throws {
+        try Task.checkCancellation()
+        pasteboard.clearContents()
+        pasteboard.setString(text, forType: .string)
+        try Task.checkCancellation()
+        guard let target, !target.isTerminated,
+              target.processIdentifier != ProcessInfo.processInfo.processIdentifier else {
+            throw PasteError.targetAppNotAvailable
+        }
+
+        if !accessibilityManager.checkPermission() {
+            let granted = await withCheckedContinuation { continuation in
+                accessibilityManager.requestPermissionWithExplanation { continuation.resume(returning: $0) }
+            }
+            try Task.checkCancellation()
+            guard granted else { throw PasteError.accessibilityPermissionDenied }
+        }
+        try Task.checkCancellation()
+        guard !target.isTerminated, target.activate(options: []) else {
+            throw PasteError.targetAppNotAvailable
+        }
+        let activated = await withCheckedContinuation { continuation in
+            ApplicationActivationWaiter.wait(for: target) { continuation.resume(returning: $0) }
+        }
+        try Task.checkCancellation()
+        guard activated, target.isActive, !target.isTerminated else {
+            throw PasteError.targetAppNotAvailable
+        }
+        // Permission prompts and app activation can take time. Restore the reviewed
+        // text immediately before posting, even if another copy happened meanwhile.
+        pasteboard.clearContents()
+        pasteboard.setString(text, forType: .string)
+        try await withCheckedThrowingContinuation { (continuation: CheckedContinuation<Void, Error>) in
+            performCGEventPaste { result in continuation.resume(with: result.mapError { $0 as Error }) }
+        }
+    }
+
     /// Attempts to paste text to the currently active application
     /// Uses CGEvent to simulate ⌘V 
     func pasteToActiveApp() {
@@ -154,7 +196,7 @@ internal class PasteManager {
     
     private func performCGEventPaste(completion: ((Result<Void, PasteError>) -> Void)? = nil) {
         // CRITICAL: Prevent any paste operations during tests
-        if NSClassFromString("XCTestCase") != nil {
+        if NSClassFromString("XCTestCase") != nil && eventPoster == nil {
             handlePasteResult(.failure(PasteError.accessibilityPermissionDenied))
             completion?(.failure(PasteError.accessibilityPermissionDenied))
             return
@@ -172,7 +214,8 @@ internal class PasteManager {
         
         // Permission is verified - proceed with paste operation
         do {
-            try simulateCmdVPaste()
+            if let eventPoster { try eventPoster() }
+            else { try simulateCmdVPaste() }
             // Paste operation completed successfully
             handlePasteResult(.success(()))
             completion?(.success(()))

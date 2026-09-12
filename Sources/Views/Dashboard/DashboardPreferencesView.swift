@@ -6,7 +6,6 @@ internal struct DashboardPreferencesView: View {
     @AppStorage("startAtLogin") private var startAtLogin = true
     @AppStorage("immediateRecording") private var immediateRecording = false
     @AppStorage("autoBoostMicrophoneVolume") private var autoBoostMicrophoneVolume = false
-    @AppStorage("enableSmartPaste") private var enableSmartPaste = false
     @AppStorage("playCompletionSound") private var playCompletionSound = true
     @AppStorage("transcriptionHistoryEnabled") private var transcriptionHistoryEnabled = false
     @AppStorage("transcriptionRetentionPeriod") private var transcriptionRetentionPeriodRaw = RetentionPeriod.oneMonth.rawValue
@@ -54,14 +53,7 @@ internal struct DashboardPreferencesView: View {
                     }
                 }
 
-                Toggle(isOn: $enableSmartPaste) {
-                    VStack(alignment: .leading, spacing: 2) {
-                        Text("Smart Paste")
-                        Text("Automatically paste finished transcripts.")
-                            .font(.caption)
-                            .foregroundStyle(.secondary)
-                    }
-                }
+                LabeledContent("Paste", value: "Review, then press Enter")
 
                 Toggle(isOn: $playCompletionSound) {
                     VStack(alignment: .leading, spacing: 2) {
@@ -103,6 +95,12 @@ internal struct DashboardPreferencesView: View {
             }
 
             Section("About") {
+                Text("Built on the original AudioWhisper project.")
+                    .foregroundStyle(.secondary)
+                Link("AudioWhisper by mazdak and contributors", destination: URL(string: "https://github.com/mazdak/AudioWhisper")!)
+                Text("Original MIT license and attribution retained.")
+                    .font(.caption)
+                    .foregroundStyle(.secondary)
                 LabeledContent("Version") {
                     Text(VersionInfo.version)
                         .font(.system(.body, design: .monospaced))

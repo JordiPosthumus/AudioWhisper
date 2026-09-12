@@ -218,20 +218,24 @@ cat >SpeedyWhisper.app/Contents/Info.plist <<EOF
 EOF
 
 # Generate app icon from our source image
-if [ -f "AudioWhisperIcon.png" ]; then
+if [ -f "SpeedyWhisperIcon.png" ]; then
   "$SCRIPT_DIR/generate-icons.sh"
 
   # Create proper icns file directly in app bundle
   if command -v iconutil >/dev/null 2>&1; then
-    iconutil -c icns AudioWhisper.iconset -o SpeedyWhisper.app/Contents/Resources/AppIcon.icns 2>/dev/null || echo "Note: iconutil failed, app will use default icon"
+    iconutil -c icns SpeedyWhisper.iconset -o SpeedyWhisper.app/Contents/Resources/AppIcon.icns 2>/dev/null || echo "Note: iconutil failed, app will use default icon"
   fi
 
   # Clean up temporary files
-  rm -rf AudioWhisper.iconset
+  rm -rf SpeedyWhisper.iconset
   rm -f AppIcon.icns # Remove any stray icns file from root
 else
-  echo "⚠️ AudioWhisperIcon.png not found, app will use default icon"
+  echo "⚠️ SpeedyWhisperIcon.png not found, app will use default icon"
 fi
+
+# Keep the original project's license and attribution in distributed app bundles.
+cp LICENSE SpeedyWhisper.app/Contents/Resources/LICENSE.txt
+cp CREDITS.md SpeedyWhisper.app/Contents/Resources/CREDITS.md
 
 # Make executable
 chmod +x SpeedyWhisper.app/Contents/MacOS/AudioWhisper

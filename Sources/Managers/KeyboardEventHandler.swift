@@ -16,26 +16,22 @@ internal class KeyboardEventHandler {
     }
     
     private func setupGlobalKeyMonitoring() {
-        // Use global monitor that works regardless of focus
+        // The live indicator does not take focus. Only Escape acts globally;
+        // ordinary typing and Return in the user's app must not control dictation.
         globalKeyMonitor = NSEvent.addGlobalMonitorForEvents(matching: .keyDown) { event in
-            // Check if recording window is visible
-            if let window = NSApp.windows.first(where: { $0.title == AppBrand.recordingWindowTitle }), window.isVisible {
-                _ = self.handleKeyEvent(event, for: window)
-            }
+            guard event.keyCode == 53,
+                  let window = NSApp.windows.first(where: { $0.title == AppBrand.recordingWindowTitle }),
+                  window.isVisible else { return }
+            NotificationCenter.default.post(name: .escapeKeyPressed, object: nil)
         }
-        
-        // Also add local monitor with proper filtering
+
         localKeyMonitor = NSEvent.addLocalMonitorForEvents(matching: .keyDown) { event in
-            // Check if recording window is visible
-            if let window = NSApp.windows.first(where: { $0.title == AppBrand.recordingWindowTitle }), window.isVisible {
-                // Always consume events when recording window is visible to prevent passthrough
-                _ = self.handleKeyEvent(event, for: window)
-                return nil // Consume the event to prevent it from reaching other apps
-            }
-            return event
+            guard let window = NSApp.windows.first(where: { $0.title == AppBrand.recordingWindowTitle }),
+                  window.isVisible, window.isKeyWindow else { return event }
+            return self.handleKeyEvent(event, for: window)
         }
     }
-    
+
     @discardableResult
     func handleKeyEvent(_ event: NSEvent, for window: NSWindow) -> NSEvent? {
         let key = event.charactersIgnoringModifiers?.lowercased() ?? ""
@@ -67,10 +63,7 @@ internal class KeyboardEventHandler {
             return nil // Consume the event
         }
         
-        // Block all other keyboard shortcuts when recording window is focused
-        if modifiers.contains(.command) {
-            return nil // Consume and block the event
-        }
+        // Preserve native selection/copy shortcuts in the transcript preview.
         
         // Allow non-command keys to pass through
         return event

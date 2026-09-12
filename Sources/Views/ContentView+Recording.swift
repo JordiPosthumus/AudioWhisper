@@ -12,6 +12,7 @@ internal extension ContentView {
         }
         lastAudioURL = nil
         showSuccess = false
+        pasteMessage = nil
         if !audioRecorder.startRecording() {
             errorMessage = LocalizedStrings.Errors.failedToStartRecording
             showError = true
@@ -82,25 +83,27 @@ internal extension ContentView {
     }
 
     func showConfirmationAndPaste(text: String) {
+        previewText = text
+        pasteMessage = nil
         showSuccess = true
         isProcessing = false
         soundManager.playCompletionSound()
+        updateRecordingWindowSize()
+        showPreviewWindow()
+    }
 
-        if UserDefaults.standard.bool(forKey: "enableSmartPaste") {
-            DispatchQueue.main.asyncAfter(deadline: .now() + 0.1) {
-                performUserTriggeredPaste()
-            }
-        } else {
-            NotificationCenter.default.post(name: .restoreFocusToPreviousApp, object: nil)
-            let completedRequest = activeTranscriptionID
-            DispatchQueue.main.asyncAfter(deadline: .now() + 2.0) {
-                guard activeTranscriptionID == completedRequest,
-                      !audioRecorder.isRecording, !isProcessing else { return }
-                hideRecordingWindow()
-                NotificationCenter.default.post(name: .restoreFocusToPreviousApp, object: nil)
-                showSuccess = false
-            }
-        }
+    func recordingSessionDidStart() {
+        processingTask?.cancel()
+        processingTask = nil
+        activeTranscriptionID = nil
+        pasteTask?.cancel()
+        pasteTask = nil
+        isPasting = false
+        isProcessing = false
+        transcriptionStartTime = nil
+        previewText = ""
+        pasteMessage = nil
+        showSuccess = false
     }
 
     func retryLastTranscription() {
