@@ -1,0 +1,62 @@
+[
+  {
+    "iteration": 1,
+    "mode": "original",
+    "seconds": 0.158321834,
+    "peak_rss_bytes": 242794496
+  },
+  {
+    "iteration": 1,
+    "mode": "streaming",
+    "seconds": 0.109305834,
+    "peak_rss_bytes": 13238272
+  },
+  {
+    "iteration": 2,
+    "mode": "streaming",
+    "seconds": 0.163726292,
+    "peak_rss_bytes": 13533184
+  },
+  {
+    "iteration": 2,
+    "mode": "original",
+    "seconds": 0.137669708,
+    "peak_rss_bytes": 242761728
+  },
+  {
+    "iteration": 3,
+    "mode": "original",
+    "seconds": 0.13336875,
+    "peak_rss_bytes": 242728960
+  },
+  {
+    "iteration": 3,
+    "mode": "streaming",
+    "seconds": 0.10647225,
+    "peak_rss_bytes": 13205504
+  },
+  {
+    "iteration": 4,
+    "mode": "streaming",
+    "seconds": 0.106707417,
+    "peak_rss_bytes": 13762560
+  },
+  {
+    "iteration": 4,
+    "mode": "original",
+    "seconds": 0.131699584,
+    "peak_rss_bytes": 242728960
+  },
+  {
+    "iteration": 5,
+    "mode": "original",
+    "seconds": 0.131627042,
+    "peak_rss_bytes": 242761728
+  },
+  {
+    "iteration": 5,
+    "mode": "streaming",
+    "seconds": 0.108030541,
+    "peak_rss_bytes": 13205504
+  }
+]
