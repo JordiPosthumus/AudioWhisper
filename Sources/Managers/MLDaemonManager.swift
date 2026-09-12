@@ -57,6 +57,32 @@ internal actor MLDaemonManager {
 
     // MARK: - Public API
 
+    struct PreviewResult: Decodable, Equatable {
+        let active: Bool
+        let stable: String
+        let draft: String
+    }
+
+    func startPreview(sessionID: UUID) async throws {
+        struct Result: Decodable { let success: Bool }
+        let result: Result = try await sendRequest(method: "preview_start", params: [
+            "session_id": sessionID.uuidString, "repo": ParakeetModel.v2English.rawValue
+        ])
+        guard result.success else { throw MLDaemonError.remoteError("Preview could not start") }
+    }
+
+    func appendPreview(sessionID: UUID, sequence: Int, pcm: Data) async throws -> PreviewResult {
+        try await sendRequest(method: "preview_audio", params: [
+            "session_id": sessionID.uuidString, "sequence": sequence,
+            "audio_b64": pcm.base64EncodedString()
+        ])
+    }
+
+    func endPreview(sessionID: UUID) async {
+        struct Result: Decodable { let success: Bool }
+        let _: Result? = try? await sendRequest(method: "preview_end", params: ["session_id": sessionID.uuidString])
+    }
+
     func transcribe(repo: String, pcmPath: String) async throws -> String {
         struct TranscribeResult: Decodable { let success: Bool; let text: String; let error: String? }
         let result: TranscribeResult = try await sendRequest(

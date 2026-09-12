@@ -3,7 +3,7 @@ import SwiftUI
 import AppKit
 @testable import AudioWhisper
 
-/// Opt-in render fixture; never opens a live window or records audio.
+/// Opt-in offscreen renders; fixture meter samples are never used in the application.
 @MainActor
 final class RecorderPreviewRenderTests: XCTestCase {
     func testRenderRecorderAndPreview() throws {
@@ -12,24 +12,56 @@ final class RecorderPreviewRenderTests: XCTestCase {
         }
         let directory = URL(fileURLWithPath: destination, isDirectory: true)
         try FileManager.default.createDirectory(at: directory, withIntermediateDirectories: true)
-        let recording = FloatingRecorderView(status: .recording, audioLevel: 0.7, recordingStartedAt: nil,
-            onPrimaryAction: {}, onDismiss: {})
+        let meter = RecorderMeterFixture()
+        try render(RecorderStreamingFixture(meter: meter), to: directory.appendingPathComponent("streaming.png"),
+                   size: TranscriptPresentation.size(finalText: nil, live: true), meter: meter)
         let processing = FloatingRecorderView(status: .processing("Transcribing"), audioLevel: 0, recordingStartedAt: nil,
+            stableText: "Let’s keep dictation simple, ", draftText: "and make every word count.", streaming: true,
             onPrimaryAction: {}, onDismiss: {})
-        try render(recording, to: directory.appendingPathComponent("recorder.png"), size: LayoutMetrics.RecordingWindow.size)
-        try render(processing, to: directory.appendingPathComponent("processing.png"), size: LayoutMetrics.RecordingWindow.size)
+        try render(processing, to: directory.appendingPathComponent("processing.png"), size: TranscriptPresentation.size(finalText: nil, live: true))
+        let text = "Let’s keep dictation simple, and make every word count."
+        let complete = FloatingRecorderView(status: .success, audioLevel: 0, recordingStartedAt: nil,
+            finalText: text, onPrimaryAction: {}, onDismiss: {})
+        try render(complete, to: directory.appendingPathComponent("complete.png"), size: TranscriptPresentation.size(finalText: text, live: false))
+        let longText = String(repeating: "A beautiful, quiet space for your words. Speak naturally and let the final pass bring everything together. ", count: 6)
+        try render(FloatingRecorderView(status: .success, audioLevel: 0, recordingStartedAt: nil, finalText: longText, onPrimaryAction: {}, onDismiss: {}),
+                   to: directory.appendingPathComponent("complete-long.png"), size: TranscriptPresentation.size(finalText: longText, live: false))
+        let offline = FloatingRecorderView(status: .recording, audioLevel: 0, recordingStartedAt: nil, onPrimaryAction: {}, onDismiss: {})
+        try render(offline, to: directory.appendingPathComponent("streaming-off.png"), size: TranscriptPresentation.size(finalText: nil, live: false))
     }
 
-    private func render<V: View>(_ view: V, to url: URL, size: CGSize) throws {
+    private func render<V: View>(_ view: V, to url: URL, size: CGSize, meter: RecorderMeterFixture? = nil) throws {
         let host = NSHostingView(rootView: view.frame(width: size.width, height: size.height))
         let window = NSWindow(contentRect: CGRect(origin: .zero, size: size), styleMask: [.borderless], backing: .buffered, defer: false)
         window.contentView = host
         host.frame = CGRect(origin: .zero, size: size)
         host.layoutSubtreeIfNeeded()
-        RunLoop.main.run(until: Date().addingTimeInterval(0.2))
+        if let meter {
+            for index in 0..<48 {
+                meter.level = Float(max(0, sin(Double(index) * 0.33) * 0.28 + sin(Double(index) * 0.71) * 0.23 + 0.40))
+                RunLoop.main.run(until: Date().addingTimeInterval(0.02))
+            }
+        }
+        RunLoop.main.run(until: Date().addingTimeInterval(0.4))
         host.layoutSubtreeIfNeeded()
         let bitmap = try XCTUnwrap(host.bitmapImageRepForCachingDisplay(in: host.bounds))
         host.cacheDisplay(in: host.bounds, to: bitmap)
         try XCTUnwrap(bitmap.representation(using: .png, properties: [:])).write(to: url)
+    }
+}
+
+@MainActor
+private final class RecorderMeterFixture: ObservableObject {
+    @Published var level: Float = 0
+}
+
+private struct RecorderStreamingFixture: View {
+    @ObservedObject var meter: RecorderMeterFixture
+    let started = Date().addingTimeInterval(-12)
+    var body: some View {
+        FloatingRecorderView(status: .recording, audioLevel: meter.level, recordingStartedAt: started,
+            waveformSamples: (0..<48).map { index in Float(max(0, sin(Double(index) * 0.33) * 0.28 + sin(Double(index) * 0.71) * 0.23 + 0.40)) },
+            stableText: "Let’s keep dictation simple, ", draftText: "and make every word count.", streaming: true,
+            onPrimaryAction: {}, onDismiss: {})
     }
 }

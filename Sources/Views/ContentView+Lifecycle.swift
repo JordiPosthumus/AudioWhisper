@@ -12,6 +12,8 @@ internal extension ContentView {
     }
     
     func handleOnDisappear() {
+        completionTask?.cancel()
+        completionTask = nil
         removeNotificationObservers()
         processingTask?.cancel()
         processingTask = nil

@@ -7,7 +7,9 @@ import os.log
 internal class AudioRecorder: NSObject, ObservableObject {
     @Published var isRecording = false
     @Published var audioLevel: Float = 0.0
+    @Published private(set) var audioLevelHistory = Array(repeating: Float(0), count: 48)
     @Published var hasPermission = false
+    let streamingPreview = StreamingPreviewCoordinator()
     
     private var audioRecorder: AVAudioRecorder?
     private var recordingURL: URL?
@@ -128,6 +130,7 @@ internal class AudioRecorder: NSObject, ObservableObject {
             
             self.isRecording = true
             self.startLevelMonitoring()
+            streamingPreview.start(enabled: AppDefaults.streamingEnabled())
             return true
         } catch {
             Logger.audioRecorder.error("Failed to start recording: \(error.localizedDescription)")
@@ -158,6 +161,7 @@ internal class AudioRecorder: NSObject, ObservableObject {
 
         audioRecorder?.stop()
         audioRecorder = nil
+        streamingPreview.stop()
         
         // Restore microphone volume if it was boosted
         if UserDefaults.standard.autoBoostMicrophoneVolume {
@@ -199,6 +203,7 @@ internal class AudioRecorder: NSObject, ObservableObject {
         // Stop recording and cleanup without returning URL
         audioRecorder?.stop()
         audioRecorder = nil
+        streamingPreview.stop()
         currentSessionStart = nil
         lastRecordingDuration = nil
         
@@ -218,6 +223,7 @@ internal class AudioRecorder: NSObject, ObservableObject {
     }
     
     private func startLevelMonitoring() {
+        audioLevelHistory = Array(repeating: 0, count: 48)
         // Use a more efficient approach for macOS
         levelUpdateTimer = Timer.scheduledTimer(withTimeInterval: 0.1, repeats: true) { [weak self] _ in
             Task { @MainActor [weak self] in
@@ -227,6 +233,8 @@ internal class AudioRecorder: NSObject, ObservableObject {
                 let normalizedLevel = self.normalizeLevel(recorder.averagePower(forChannel: 0))
 
                 self.audioLevel = normalizedLevel
+                self.audioLevelHistory.removeFirst()
+                self.audioLevelHistory.append(normalizedLevel)
             }
         }
     }
@@ -235,6 +243,7 @@ internal class AudioRecorder: NSObject, ObservableObject {
         levelUpdateTimer?.invalidate()
         levelUpdateTimer = nil
         audioLevel = 0.0
+        audioLevelHistory = Array(repeating: 0, count: 48)
     }
     
     private func normalizeLevel(_ level: Float) -> Float {

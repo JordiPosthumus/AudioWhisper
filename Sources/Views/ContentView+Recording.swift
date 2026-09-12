@@ -12,6 +12,7 @@ internal extension ContentView {
         }
         lastAudioURL = nil
         showSuccess = false
+        finalText = nil
         if !audioRecorder.startRecording() {
             errorMessage = LocalizedStrings.Errors.failedToStartRecording
             showError = true
@@ -39,6 +40,8 @@ internal extension ContentView {
         activeTranscriptionID = requestID
         isProcessing = true
         showSuccess = false
+        completionTask?.cancel()
+        finalText = nil
         transcriptionStartTime = Date()
         progressMessage = "Transcribing..."
         lastAudioURL = audioURL
@@ -67,7 +70,7 @@ internal extension ContentView {
                 }
                 guard activeTranscriptionID == requestID else { return }
                 transcriptionStartTime = nil
-                finishTranscription()
+                finishTranscription(text: text, requestID: requestID)
             } catch is CancellationError {
                 guard activeTranscriptionID == requestID else { return }
                 isProcessing = false
@@ -82,15 +85,29 @@ internal extension ContentView {
         }
     }
 
-    func finishTranscription() {
+    func finishTranscription(text: String, requestID: UUID) {
         isProcessing = false
+        finalText = text
+        showSuccess = true
         soundManager.playCompletionSound()
-        // The transcript is already on the clipboard. Never show a review panel
-        // or activate another app; the user chooses where and when to paste.
-        hideRecordingWindow()
+        updateRecordingWindowSize()
+        // A brief confirmation never takes keyboard focus or sends a paste event.
+        NSApp.windows.first { $0.title == AppBrand.recordingWindowTitle }?.orderFrontRegardless()
+        completionTask?.cancel()
+        completionTask = Task { @MainActor in
+            do { try await Task.sleep(for: .seconds(TranscriptPresentation.duration(for: text))) }
+            catch { return }
+            guard activeTranscriptionID == requestID, !audioRecorder.isRecording, !isProcessing else { return }
+            hideRecordingWindow()
+            showSuccess = false
+            finalText = nil
+        }
     }
 
     func recordingSessionDidStart() {
+        completionTask?.cancel()
+        completionTask = nil
+        finalText = nil
         processingTask?.cancel()
         processingTask = nil
         activeTranscriptionID = nil

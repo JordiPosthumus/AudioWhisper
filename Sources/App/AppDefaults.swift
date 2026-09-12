@@ -18,6 +18,7 @@ internal enum AppDefaults {
         static let transcriptionRetentionPeriod = "transcriptionRetentionPeriod"
         static let enableSmartPaste = "enableSmartPaste"
         static let immediateRecording = "immediateRecording"
+        static let transcriptionStreaming = "transcriptionStreaming"
         static let globalHotkey = "globalHotkey"
 
         static let pressAndHoldEnabled = "pressAndHoldEnabled"
@@ -29,6 +30,10 @@ internal enum AppDefaults {
     // Chosen defaults.
     internal static let defaultTranscriptionProvider: TranscriptionProvider = .parakeet
     internal static let defaultParakeetModel: ParakeetModel = .v2English
+
+    internal static func streamingEnabled(in defaults: UserDefaults = .standard) -> Bool {
+        defaults.object(forKey: Keys.transcriptionStreaming) as? Bool ?? true
+    }
 
     internal static func register() {
         UserDefaults.standard.register(defaults: [
@@ -42,6 +47,7 @@ internal enum AppDefaults {
             Keys.transcriptionRetentionPeriod: RetentionPeriod.oneMonth.rawValue,
             Keys.enableSmartPaste: false,
             Keys.immediateRecording: false,
+            Keys.transcriptionStreaming: true,
             Keys.globalHotkey: "⌘⇧Space",
 
             Keys.pressAndHoldEnabled: PressAndHoldConfiguration.defaults.enabled,
@@ -51,4 +57,3 @@ internal enum AppDefaults {
         ])
     }
 }
-

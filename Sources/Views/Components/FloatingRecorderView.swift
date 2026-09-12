@@ -1,84 +1,153 @@
 import SwiftUI
 
-/// A compact live meter. Completed transcripts go to the clipboard and the HUD hides.
+/// Voice-driven feedback, provisional live words, and a self-dismissing clipboard confirmation.
 internal struct FloatingRecorderView: View {
     let status: AppStatus
     let audioLevel: Float
     let recordingStartedAt: Date?
+    var waveformSamples: [Float] = []
+    var stableText = ""
+    var draftText = ""
+    var streaming = false
+    var preparingPreview = false
+    var previewProblem: String?
+    var finalText: String?
     let onPrimaryAction: () -> Void
     let onDismiss: () -> Void
 
-    private let accent = Color(red: 0.20, green: 0.85, blue: 0.95)
+    @Environment(\.accessibilityReduceMotion) private var reduceMotion
+    @State private var completionGlow = false
+    private let cyan = Color(red: 0.30, green: 0.91, blue: 0.97)
+    private let lilac = Color(red: 0.65, green: 0.53, blue: 1)
     private var recording: Bool { if case .recording = status { return true }; return false }
     private var processing: Bool { if case .processing = status { return true }; return false }
-    private var level: Double { AudioLevelDisplay.clamped(audioLevel) }
-    var body: some View {
-        recordingBar
-        .frame(width: LayoutMetrics.RecordingWindow.size.width, height: LayoutMetrics.RecordingWindow.size.height)
-        .background(Color(red: 0.055, green: 0.075, blue: 0.11))
-        .clipShape(RoundedRectangle(cornerRadius: LayoutMetrics.RecordingWindow.cornerRadius, style: .continuous))
-        .overlay(RoundedRectangle(cornerRadius: LayoutMetrics.RecordingWindow.cornerRadius, style: .continuous)
-            .stroke(.white.opacity(0.15), lineWidth: 1))
-        .environment(\.colorScheme, .dark)
+    private var size: CGSize { TranscriptPresentation.size(finalText: finalText, live: streaming) }
+    private var hasLiveWords: Bool { !(stableText + draftText).trimmingCharacters(in: .whitespacesAndNewlines).isEmpty }
+    private var levels: [Double] {
+        if reduceMotion { return Array(repeating: AudioLevelDisplay.clamped(audioLevel), count: 48) }
+        return waveformSamples.isEmpty ? Array(repeating: 0, count: 48) : waveformSamples.map(AudioLevelDisplay.clamped)
     }
 
-    private var recordingBar: some View {
-        HStack(spacing: 12) {
+    var body: some View {
+        VStack(alignment: .leading, spacing: 0) {
+            header.padding(.horizontal, 19).padding(.top, 15)
+            if let finalText {
+                finalTranscript(finalText)
+            } else {
+                VoiceRibbon(levels: levels, active: recording, cyan: cyan, lilac: lilac)
+                    .animation(reduceMotion ? nil : .linear(duration: 0.1), value: waveformSamples)
+                    .frame(height: 37)
+                    .padding(.horizontal, 20)
+                    .padding(.top, 9)
+                    .padding(.bottom, streaming ? 9 : 12)
+                if streaming { liveTranscript }
+            }
+        }
+        .frame(width: size.width, height: size.height, alignment: .top)
+        .background {
+            ZStack {
+                RoundedRectangle(cornerRadius: 25, style: .continuous)
+                    .fill(Color(red: 0.035, green: 0.050, blue: 0.083))
+                RoundedRectangle(cornerRadius: 25, style: .continuous)
+                    .fill(LinearGradient(colors: [lilac.opacity(0.12), .clear, cyan.opacity(completionGlow ? 0.19 : 0.035)], startPoint: .topLeading, endPoint: .bottomTrailing))
+            }
+        }
+        .overlay {
+            RoundedRectangle(cornerRadius: 25, style: .continuous)
+                .stroke(LinearGradient(colors: [cyan.opacity(completionGlow ? 0.8 : 0.32), .white.opacity(0.06), lilac.opacity(0.38)], startPoint: .topLeading, endPoint: .bottomTrailing), lineWidth: 1)
+        }
+        .clipShape(RoundedRectangle(cornerRadius: 25, style: .continuous))
+        .environment(\.colorScheme, .dark)
+        .onChange(of: finalText) { _, text in animateCompletion(text != nil) }
+        .onAppear { if finalText != nil { animateCompletion(true) } }
+    }
+
+    private func animateCompletion(_ complete: Bool) {
+        completionGlow = false
+        guard complete else { return }
+        if reduceMotion { completionGlow = true }
+        else { withAnimation(.easeOut(duration: 0.4)) { completionGlow = true } }
+    }
+
+    private var header: some View {
+        HStack(spacing: 10) {
             Button(action: onPrimaryAction) {
-                AudioLevelOrb(level: recording ? level : 0, recording: recording, processing: processing)
-                    .frame(width: 42, height: 42)
+                ZStack {
+                    Circle().fill(cyan.opacity(finalText == nil ? 0.09 : 0.17))
+                    Circle().stroke(cyan.opacity(0.25), lineWidth: 1)
+                    Image(systemName: finalText != nil ? "checkmark" : recording ? "stop.fill" : "waveform")
+                        .font(.system(size: finalText != nil ? 13 : 11, weight: .bold))
+                        .foregroundStyle(cyan)
+                        .scaleEffect(finalText != nil && !completionGlow && !reduceMotion ? 0.6 : 1)
+                }
+                .frame(width: 32, height: 32)
             }
             .buttonStyle(.plain)
-            .disabled(processing)
+            .disabled(processing || finalText != nil)
             .help(recording ? "Stop recording" : "Start recording")
-            .accessibilityLabel(recording ? "Stop recording" : "Start recording")
-
-            VStack(alignment: .leading, spacing: 5) {
-                HStack(spacing: 6) {
-                    Text(recording ? "Listening" : processing ? "Transcribing" : "SpeedyWhisper")
-                        .font(.system(size: 12, weight: .semibold))
-                    if recording, let recordingStartedAt {
-                        Text(recordingStartedAt, style: .timer)
-                            .font(.system(size: 10, weight: .medium, design: .monospaced))
-                            .foregroundStyle(.white.opacity(0.55))
-                    }
-                }
-                if recording {
-                    HStack(spacing: 3) {
-                        ForEach(0..<12, id: \.self) { index in
-                            Capsule()
-                                .fill(AudioLevelDisplay.isLit(index: index, count: 12, level: level) ? accent : .white.opacity(0.13))
-                                .frame(width: 4, height: 7)
-                        }
-                    }
-                    .accessibilityElement(children: .ignore)
-                    .accessibilityLabel("Microphone level")
-                    .accessibilityValue("\(Int(level * 100)) percent")
-                } else {
-                    Text(processing ? "Local transcription…" : "Click to record")
-                        .font(.system(size: 10))
-                        .foregroundStyle(.white.opacity(0.55))
-                }
+            .accessibilityLabel(finalText != nil ? "Copied" : recording ? "Stop recording" : "Start recording")
+            VStack(alignment: .leading, spacing: 3) {
+                Text(finalText != nil ? "Copied" : recording ? "Listening" : processing ? "Finalizing" : "SpeedyWhisper")
+                    .font(.system(size: 13, weight: .semibold))
+                    .foregroundStyle(.white.opacity(0.94))
+                Text(finalText != nil ? "Ready for ⌘V" : processing ? "Checking the complete recording" : streaming ? "LOCAL · LIVE DICTATION" : "LOCAL DICTATION")
+                    .font(.system(size: finalText != nil || processing ? 10 : 8, weight: .medium, design: .rounded))
+                    .tracking(finalText != nil || processing ? 0 : 1.2)
+                    .foregroundStyle(.white.opacity(0.43))
             }
-            .frame(maxWidth: .infinity, alignment: .leading)
-            .foregroundStyle(.white)
-
-            closeButton
+            Spacer(minLength: 8)
+            if recording, let recordingStartedAt {
+                Text(recordingStartedAt, style: .timer)
+                    .font(.system(size: 11, weight: .medium, design: .monospaced))
+                    .foregroundStyle(cyan.opacity(0.8))
+                    .padding(.horizontal, 8).padding(.vertical, 5)
+                    .background(cyan.opacity(0.06), in: Capsule())
+            } else if processing { ProgressView().controlSize(.small).tint(cyan) }
+            Button(action: onDismiss) {
+                Image(systemName: "xmark").font(.system(size: 9, weight: .semibold))
+                    .foregroundStyle(.white.opacity(0.35))
+                    .frame(width: 20, height: 24).contentShape(Rectangle())
+            }
+            .buttonStyle(.plain).accessibilityLabel("Dismiss recorder")
         }
-        .padding(.horizontal, 11)
     }
 
-    private var closeButton: some View {
-        Button(action: onDismiss) {
-            Image(systemName: "xmark")
-                .font(.system(size: 10, weight: .semibold))
-                .foregroundStyle(.white.opacity(0.55))
-                .frame(width: 20, height: 24)
-                .contentShape(Rectangle())
+    private var liveTranscript: some View {
+        VStack(alignment: .leading, spacing: 10) {
+            Rectangle()
+                .fill(LinearGradient(colors: [.white.opacity(0.02), .white.opacity(0.13), .white.opacity(0.02)], startPoint: .leading, endPoint: .trailing))
+                .frame(height: 1)
+            if hasLiveWords {
+                let tail = TranscriptPresentation.liveTail(stable: stableText, draft: draftText)
+                (Text(tail.stable).foregroundColor(.white.opacity(0.92)) + Text(tail.draft).foregroundColor(cyan.opacity(0.8)))
+                    .font(.system(size: 14)).lineSpacing(3).lineLimit(2).truncationMode(.head)
+                    .frame(maxWidth: .infinity, alignment: .leading)
+            } else {
+                Text(previewProblem ?? (preparingPreview ? "Preparing live words…" : processing ? "Your final text is on its way…" : "Your words will appear here…"))
+                    .font(.system(size: 12)).foregroundStyle(.white.opacity(0.36)).lineLimit(2)
+            }
+            if previewProblem != nil, hasLiveWords {
+                Text("Live preview paused · final transcription continues")
+                    .font(.system(size: 9)).foregroundStyle(.white.opacity(0.40))
+            }
         }
-        .buttonStyle(.plain)
-        .help("Dismiss (Esc)")
-        .accessibilityLabel("Dismiss recorder")
+        .padding(.horizontal, 20)
+    }
+
+    private func finalTranscript(_ text: String) -> some View {
+        VStack(alignment: .leading, spacing: 10) {
+            ScrollView {
+                Text(text).font(.system(size: 15)).lineSpacing(3)
+                    .foregroundStyle(.white.opacity(0.94))
+                    .frame(maxWidth: .infinity, alignment: .leading)
+            }
+            .scrollIndicators(.hidden).frame(maxHeight: .infinity)
+            Capsule()
+                .fill(LinearGradient(colors: [cyan.opacity(0.12), cyan, lilac.opacity(0.7)], startPoint: .leading, endPoint: .trailing))
+                .frame(height: 2)
+                .scaleEffect(x: completionGlow ? 1 : 0, y: 1, anchor: .leading)
+        }
+        .padding(.horizontal, 20).padding(.top, 15).padding(.bottom, 17)
     }
 }
 
@@ -87,38 +156,29 @@ internal enum AudioLevelDisplay {
         guard value.isFinite else { return 0 }
         return Double(min(1, max(0, value)))
     }
-
     static func isLit(index: Int, count: Int, level: Double) -> Bool {
         level > Double(index) / Double(count)
     }
 }
 
-private struct AudioLevelOrb: View {
-    let level: Double
-    let recording: Bool
-    let processing: Bool
-    @Environment(\.accessibilityReduceMotion) private var reduceMotion
-
+private struct VoiceRibbon: View {
+    let levels: [Double]
+    let active: Bool
+    let cyan: Color
+    let lilac: Color
     var body: some View {
-        ZStack {
-            Circle().fill(Color(red: 0.08, green: 0.18, blue: 0.25))
-            Circle()
-                .stroke(Color.cyan.opacity(recording ? 0.3 + level * 0.7 : 0.25), lineWidth: recording ? 1.5 + level * 3 : 1.5)
-                .padding(2)
-            Circle()
-                .fill(LinearGradient(colors: [.cyan, .blue], startPoint: .topLeading, endPoint: .bottomTrailing))
-                .frame(width: 24, height: 24)
-                .scaleEffect(recording ? 0.72 + level * 0.38 : 0.82)
-                .opacity(recording ? 0.55 + level * 0.45 : 0.85)
-            if processing {
-                ProgressView().controlSize(.small).tint(.white)
-            } else {
-                Image(systemName: recording ? "stop.fill" : "mic.fill")
-                    .font(.system(size: recording ? 9 : 11, weight: .semibold))
-                    .foregroundStyle(.white)
+        GeometryReader { geometry in
+            HStack(alignment: .center, spacing: 3) {
+                ForEach(levels.indices, id: \.self) { index in
+                    let level = active ? levels[index] : 0
+                    Capsule()
+                        .fill(LinearGradient(colors: [cyan.opacity(0.9), lilac.opacity(0.8)], startPoint: .top, endPoint: .bottom))
+                        .frame(width: max(2, (geometry.size.width - CGFloat(levels.count - 1) * 3) / CGFloat(levels.count)), height: max(2, CGFloat(pow(level, 1.5)) * geometry.size.height))
+                        .opacity(0.18 + level * 0.82)
+                }
             }
+            .frame(height: geometry.size.height)
         }
-        .animation(reduceMotion ? nil : .easeOut(duration: 0.1), value: level)
-        .accessibilityHidden(true)
+        .accessibilityElement(children: .ignore).accessibilityLabel("Microphone waveform")
     }
 }

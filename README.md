@@ -2,19 +2,19 @@
 
 <p align="center"><img src="SpeedyWhisperIcon.png" width="128" alt="SpeedyWhisper app icon"></p>
 
-A small, local macOS dictation app: speak, then paste with ⌘V.
+A small, local macOS dictation app: watch your words appear while you speak, then paste with ⌘V.
 
 **Built on [AudioWhisper by mazdak and contributors](https://github.com/mazdak/AudioWhisper).** The original [MIT license](LICENSE) is preserved. See [Credits](CREDITS.md).
 
 ## Daily use
 
 - Start dictation with your existing hotkey or press-and-hold shortcut.
-- A small floating orb appears immediately at the exact center of the screen containing your pointer. Its ring and meter follow the actual microphone level.
-- Stop recording. The bar shows transcription progress, then disappears automatically.
+- A centered floating recorder shows a voice-driven waveform, timer, and two lines of live text. Provisional words are highlighted while they settle.
+- Stop recording. The existing full-audio Parakeet pass produces the final text, copies it, and shows a brief animated confirmation that dismisses itself.
 - The completed text is copied to your clipboard. Press **⌘V** yourself wherever you want to paste. **Escape** cancels recording.
 - History, recording preferences, and launch at login live in a compact settings window.
 
-No Accessibility permission or paste setup is required. The app never sends paste keystrokes. The current backend transcribes after recording stops; it does not stream partial words.
+No Accessibility permission or paste setup is required. The app never sends paste keystrokes. Turn **Transcription Streaming** off in Preferences to use record-then-transcribe without live audio processing. The setting is saved and applies to the next recording.
 
 ## This fork
 
@@ -34,4 +34,4 @@ CODE_SIGN_IDENTITY=- scripts/build.sh
 
 The release script produces `SpeedyWhisper.app`. An installed `uv` executable or a copy in `Sources/Resources/bin/uv` is needed for runtime packaging. The existing Python dependency manifest is deliberately preserved; removing unused packages from the live environment is a separate change.
 
-See [the interface notes](SPEEDYWHISPER.md), [the reduction scope](SLIM_BUILD.md), and [the logo source and generation prompt](docs/branding/logo-prompt.md).
+See [the streaming design and measured validation](docs/STREAMING.md), [the interface notes](SPEEDYWHISPER.md), [the reduction scope](SLIM_BUILD.md), and [the logo source and generation prompt](docs/branding/logo-prompt.md).

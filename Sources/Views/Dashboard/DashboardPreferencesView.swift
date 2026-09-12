@@ -5,6 +5,7 @@ import os.log
 internal struct DashboardPreferencesView: View {
     @AppStorage("startAtLogin") private var startAtLogin = true
     @AppStorage("immediateRecording") private var immediateRecording = false
+    @AppStorage(AppDefaults.Keys.transcriptionStreaming) private var transcriptionStreaming = true
     @AppStorage("autoBoostMicrophoneVolume") private var autoBoostMicrophoneVolume = false
     @AppStorage("playCompletionSound") private var playCompletionSound = true
     @AppStorage("transcriptionHistoryEnabled") private var transcriptionHistoryEnabled = false
@@ -54,6 +55,15 @@ internal struct DashboardPreferencesView: View {
                 }
 
                 LabeledContent("Paste", value: "Copied automatically; paste with ⌘V")
+
+                Toggle(isOn: $transcriptionStreaming) {
+                    VStack(alignment: .leading, spacing: 2) {
+                        Text("Transcription Streaming")
+                        Text("Show live words while you speak. Changes apply to your next recording; the final pass always checks the complete audio.")
+                            .font(.caption)
+                            .foregroundStyle(.secondary)
+                    }
+                }
 
                 Toggle(isOn: $playCompletionSound) {
                     VStack(alignment: .leading, spacing: 2) {

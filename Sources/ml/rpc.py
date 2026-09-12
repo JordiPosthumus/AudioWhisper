@@ -9,6 +9,7 @@ from typing import Any, Dict
 
 from .loader import load_parakeet_model
 from .parakeet import DEFAULT_PARAKEET_REPO, transcribe
+from .preview import sessions
 
 
 def _respond(payload: Dict[str, Any]) -> None:
@@ -24,7 +25,18 @@ def _execute(method: str, params: Dict[str, Any]) -> Dict[str, Any]:
         pcm_path = params.get("pcm_path")
         if not pcm_path:
             raise ValueError("pcm_path is required for transcribe")
+        # The final pass always owns the model; release only provisional state.
+        sessions.clear()
         return transcribe(repo, pcm_path)
+    if method == "preview_start":
+        return sessions.start(params.get("session_id"), params.get("repo") or DEFAULT_PARAKEET_REPO)
+    if method == "preview_audio":
+        return sessions.append(params.get("session_id"), params.get("sequence"), params.get("audio_b64"))
+    if method == "preview_end":
+        session_id = params.get("session_id")
+        if not session_id:
+            raise ValueError("session_id is required")
+        return sessions.clear(session_id)
     if method == "warmup":
         warm_type = params.get("type")
         repo = params.get("repo")

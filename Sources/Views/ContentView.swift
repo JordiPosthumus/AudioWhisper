@@ -3,6 +3,7 @@ import AVFoundation
 
 internal struct ContentView: View {
     @ObservedObject var audioRecorder: AudioRecorder
+    @ObservedObject var streamingPreview: StreamingPreviewCoordinator
     @AppStorage(AppDefaults.Keys.immediateRecording) var immediateRecording = false
     @State var parakeetService: ParakeetService
     @State var statusViewModel = StatusViewModel()
@@ -14,6 +15,8 @@ internal struct ContentView: View {
     @State var showError = false
     @State var errorMessage = ""
     @State var showSuccess = false
+    @State var finalText: String?
+    @State var completionTask: Task<Void, Never>?
     @State var isHovered = false
     @State var isHandlingSpaceKey = false
     @State var processingTask: Task<Void, Never>?
@@ -32,6 +35,7 @@ internal struct ContentView: View {
     init(parakeetService: ParakeetService = ParakeetService(), audioRecorder: AudioRecorder) {
         self._parakeetService = State(initialValue: parakeetService)
         self.audioRecorder = audioRecorder
+        self.streamingPreview = audioRecorder.streamingPreview
     }
     
     private func showErrorAlert() {
@@ -44,6 +48,13 @@ internal struct ContentView: View {
             status: statusViewModel.currentStatus,
             audioLevel: audioRecorder.audioLevel,
             recordingStartedAt: audioRecorder.currentSessionStart,
+            waveformSamples: audioRecorder.audioLevelHistory,
+            stableText: streamingPreview.stableText,
+            draftText: streamingPreview.draftText,
+            streaming: streamingPreview.isEnabledForSession,
+            preparingPreview: streamingPreview.isPreparing,
+            previewProblem: streamingPreview.problem,
+            finalText: finalText,
             onPrimaryAction: {
                 if audioRecorder.isRecording { stopAndProcess() }
                 else if !isProcessing { startRecording() }
@@ -93,6 +104,7 @@ internal struct ContentView: View {
             updateStatus()
             updateRecordingWindowSize()
         }
+        .onChange(of: streamingPreview.isEnabledForSession) { _, _ in updateRecordingWindowSize() }
         .onChange(of: showError) { _, newValue in
             updateStatus()
             if newValue {

@@ -4,6 +4,9 @@ import AppKit
 @MainActor
 internal extension ContentView {
     func dismissRecorder() {
+        completionTask?.cancel()
+        completionTask = nil
+        finalText = nil
         processingTask?.cancel()
         processingTask = nil
         activeTranscriptionID = nil
@@ -19,9 +22,9 @@ internal extension ContentView {
 
     func updateRecordingWindowSize() {
         guard let window = NSApp.windows.first(where: { $0.title == AppBrand.recordingWindowTitle }) else { return }
-        let size = LayoutMetrics.RecordingWindow.size
-        let visible = (window.screen ?? NSScreen.main)?.visibleFrame ?? window.frame
-        let frame = RecorderWindowGeometry.resized(window.frame, to: size, inside: visible)
+        let size = TranscriptPresentation.size(finalText: finalText, live: streamingPreview.isEnabledForSession)
+        let screen = (window.screen ?? WindowController.recordingScreen())?.frame ?? window.frame
+        let frame = RecorderWindowGeometry.centered(size: size, on: screen)
         window.setFrame(frame, display: true)
     }
 

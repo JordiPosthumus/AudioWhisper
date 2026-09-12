@@ -4,11 +4,13 @@ SpeedyWhisper is the personal Parakeet v2 fork of [AudioWhisper by mazdak and co
 
 ## Recording and manual paste
 
-A 224 × 64 point floating recorder appears immediately for Express Mode and press-and-hold dictation. It appears at the exact geometric center of the screen containing the pointer, without taking keyboard focus. It recenters for each new appearance. Its orb, timer, and meter follow the actual recording. Silence does not generate artificial waveform activity.
+The recorder appears at the exact center of the screen containing the pointer, without taking keyboard focus. Its cyan-to-violet waveform displays actual recent microphone levels and its timer tracks the recording. Two compact lines show live Parakeet text; draft words are tinted cyan. The listening display is 380 × 180 points with streaming, or 380 × 112 without it.
 
-After recording stops, the same small bar shows transcription progress. Completion copies the transcript to the clipboard, plays the existing completion sound if enabled, and hides the bar immediately. The user presses ⌘V in their chosen application. There is no review panel, Enter-to-paste action, synthetic paste event, or Accessibility setup. A stale SmartPaste preference cannot require extra permissions.
+Stopping still runs the established full-recording Parakeet pass. The final text is copied immediately, the view gives a single glow/check confirmation, and then dismisses automatically. Short phrases remain for 0.85 seconds; longer text receives more scan time, up to six seconds. The user presses ⌘V in their chosen application. There is no Paste button, synthetic paste event, or Accessibility setup. Reduce Motion is respected.
 
-The existing Parakeet backend processes the finished recording in one request. It does not currently emit partial words during recording. Model inference and microphone capture are unchanged.
+Transcription Streaming defaults on. Its saved Preferences toggle applies to the next recording. Turning it off starts no preview microphone tap or preview model requests; the existing final pass remains available in both modes.
+
+See `docs/STREAMING.md` for the isolated preview lifecycle and validation measurements.
 
 ## Preserved behavior and identity
 
