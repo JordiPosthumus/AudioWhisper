@@ -180,9 +180,7 @@ internal struct TranscriptionHistoryView: View {
         isBusy = true
         Task {
             do {
-                for record in records {
-                    try await DataManager.shared.deleteRecord(record)
-                }
+                try await DataManager.shared.deleteRecords(records)
                 await MainActor.run {
                     selection.removeAll()
                     isBusy = false
