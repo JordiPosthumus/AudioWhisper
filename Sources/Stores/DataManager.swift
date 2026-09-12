@@ -130,7 +130,7 @@ internal final class DataManager: DataManagerProtocol {
             
             let modelConfiguration = ModelConfiguration(
                 schema: schema,
-                isStoredInMemoryOnly: false,
+                url: try HistoryStore.prepareURL(),
                 allowsSave: true
             )
             

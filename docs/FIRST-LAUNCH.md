@@ -1,6 +1,6 @@
 # First-launch setup and release validation
 
-ScribeKitt 210.13 adds a single first-run action for new Apple Silicon installations. It prepares the existing Python 3.11 runtime manifest, downloads the two Parakeet v2 files (`config.json` and `model.safetensors`), and verifies offline decoding with a one-second synthetic silent fixture. The fixture is deleted afterward and never enters the clipboard or history. A working existing model/runtime bypasses this flow without dependency syncing or model loading at app startup.
+ScribeKitt 210.14 adds a single first-run action for new Apple Silicon installations. It prepares the existing Python 3.11 runtime manifest, downloads the two Parakeet v2 files (`config.json` and `model.safetensors`), and verifies offline decoding with a one-second synthetic silent fixture. The fixture is deleted afterward and never enters the clipboard or history. A working existing model/runtime bypasses this flow without dependency syncing or model loading at app startup.
 
 The setup action alone can download model files. Normal transcription resolves the existing snapshot explicitly with `local_files_only=True` and passes its directory to Parakeet with the same default arguments as before. This fixes an import-time offline-flag issue in the Hub library that previously allowed an online metadata lookup. The in-process model cache and final generation function remain intact. Existing local-directory model loading remains supported.
 

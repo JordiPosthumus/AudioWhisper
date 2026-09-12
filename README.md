@@ -42,7 +42,7 @@ Existing installations with the model and runtime already present skip setup. If
 
 ScribeKitt focuses on local **Parakeet v2** dictation, live text, and a compact history. File transcription, completion sounds, and microphone boosting are included. It keeps the original project's license and credits.
 
-When upgrading from AudioWhisper or SpeedyWhisper, quit the previous app and replace it. These builds share their established history and preferences. The original bundle identifier and application-support paths remain in use to preserve runtime compatibility. The installed app is `/Applications/ScribeKitt.app`. Its internal identifier and data folders keep their original names to retain existing history, preferences, and model files.
+When upgrading from AudioWhisper or SpeedyWhisper, quit the previous app and replace it. Existing preferences, runtime, and cached models are retained. ScribeKitt uses a dedicated history file at `~/Library/Application Support/AudioWhisper/history.store`; a healthy legacy history is imported automatically with a timestamped backup. The original bundle identifier and support-folder name remain stable. The installed app is `/Applications/ScribeKitt.app`.
 
 ## Build
 

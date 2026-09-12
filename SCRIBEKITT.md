@@ -16,7 +16,7 @@ See `docs/STREAMING.md` for the isolated preview lifecycle and validation measur
 
 ## Preserved behavior and identity
 
-The established `com.audiowhisper.app` identifier, executable/module names, application-support paths, Python environment, cached Parakeet v2 model, audio capture settings, microphone boosting, history schema, and existing preferences remain in use. Microphone boosting stays enabled at the owner's request.
+The established `com.audiowhisper.app` identifier, executable/module names, application-support folder, Python environment, cached Parakeet v2 model, audio capture settings, microphone boosting, history schema, and existing preferences remain in use. Microphone boosting stays enabled at the owner's request.
 
 Settings/history opens at 620 × 520 points, with a 540 × 420 minimum. Three compact section controls replace the original sidebar. History has search, Copy, and a menu for the existing delete actions.
 
@@ -33,3 +33,7 @@ No synthetic paste events are used. See `docs/ACCEPTANCE.md` for the live workfl
 ## One-time setup
 
 A new installation offers one Prepare ScribeKitt action for the local Python runtime and Parakeet v2 model. Existing installations bypass setup; no model selector or tuning controls are added. Recording shortcuts open setup until verification succeeds. Normal model loading resolves cached files explicitly offline and retains the same decoder defaults and model cache. See [first-launch validation](docs/FIRST-LAUNCH.md).
+
+## Dedicated history storage
+
+History now uses `~/Library/Application Support/AudioWhisper/history.store`. Earlier builds used the generic `~/Library/Application Support/default.store`, which can collide with other SwiftData applications. The migration inspects legacy SQLite read-only, copies a healthy transcription store including committed WAL entries, and keeps a timestamped backup before opening the dedicated copy. An unrelated database is left untouched. Regression tests verify all record fields, backup contents, independent new saves, and byte-for-byte preservation of an unrelated legacy file.
