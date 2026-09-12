@@ -47,10 +47,10 @@ class RPCRegressionTests(unittest.TestCase):
 
     def test_final_pass_releases_preview_before_transcribing(self):
         def transcribe(repo, path):
-            self.assertIsNone(rpc.sessions.stream)
+            self.assertIsNone(rpc.sessions.model)
             return {"success": True, "text": "final"}
         rpc.sessions.session_id = "old"
-        rpc.sessions.stream = object()
+        rpc.sessions.model = object()
         with patch.object(rpc, "transcribe", transcribe):
             self.assertEqual(rpc._execute("transcribe", {"pcm_path": "sample"})["text"], "final")
 
@@ -82,18 +82,18 @@ class PreviewRegressionTests(unittest.TestCase):
         self.assertEqual(model.encoder.kind, "original")
         self.assertEqual(model.encoder.layers[0].self_attn, "original")
         sessions.clear("one")
-        self.assertIsNone(sessions.stream)
+        self.assertIsNone(sessions.model)
 
     def test_late_cleanup_cannot_end_a_new_recording(self):
         model = FakeModel()
         sessions = PreviewSessions(loader=lambda _: model)
         sessions.start("old", "model")
         sessions.start("new", "model")
-        active = sessions.stream
+        active = sessions.model
         sessions.clear("old")
-        self.assertIs(sessions.stream, active)
+        self.assertIs(sessions.model, active)
         self.assertFalse(sessions.append("old", 0, "unused")["active"])
-        self.assertIs(sessions.stream, active)
+        self.assertIs(sessions.model, active)
 
     def test_invalid_audio_is_rejected_before_model_inference(self):
         model = FakeModel()

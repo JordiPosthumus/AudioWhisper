@@ -40,6 +40,20 @@ final class StreamingRealModelTests: XCTestCase {
             XCTAssertNotEqual(preview.stableText + preview.draftText, initial)
             XCTAssertFalse((preview.stableText + preview.draftText).isEmpty, "The second packet must not erase the early draft")
             preview.stop()
+            // Replaying short speech packet by packet must converge to the normal
+            // decoder's words. The former streaming approximation fails this check.
+            let qualitySession = UUID()
+            try await daemon.startPreview(sessionID: qualitySession)
+            var draft = ""
+            for (sequence, offset) in stride(from: 0, to: pcm.count, by: 51_200).enumerated() {
+                let result = try await daemon.appendPreview(sessionID: qualitySession, sequence: sequence,
+                    pcm: Data(pcm[offset..<min(offset + 51_200, pcm.count)]))
+                draft = result.stable + result.draft
+            }
+            if pcm.count <= 16_000 * 4 * 8 {
+                XCTAssertEqual(draft, baseline, "A short live draft must converge to full-attention decoding")
+            }
+            await daemon.endPreview(sessionID: qualitySession)
             let final = try await daemon.transcribe(repo: ParakeetModel.v2English.rawValue, pcmPath: input)
             XCTAssertEqual(final, baseline)
             let finalPID = await daemon.processIdentifierForTesting

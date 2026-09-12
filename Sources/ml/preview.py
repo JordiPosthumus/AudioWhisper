@@ -1,46 +1,37 @@
-"""Disposable live draft state sharing the existing cached model's weights.
+"""Live drafts from a rolling audio window using the unchanged cached model.
 
-Only preview module wrappers and attention state are separate. The final model
-keeps its original attention objects and decoding settings. We own the stream
-without its context-manager entry/exit so it cannot swap those attention objects
-or clear the shared MLX allocator cache when a recording ends.
+Normal full-attention decoding avoids the severe accuracy loss of the installed
+library's streaming approximation. Only eight seconds of preview PCM are kept;
+the independent AAC recording still supplies the complete final transcription.
 """
 
 from __future__ import annotations
 
 import base64
-import copy
 from typing import Any
 
 from .loader import load_parakeet_model
+from .parakeet import extract_parakeet_text
 
 
 class PreviewSessions:
     def __init__(self, loader=None):
         self.loader = loader or load_parakeet_model
         self.session_id = None
-        self.stream = None
+        self.model = None
+        self.audio = bytearray()
         self.sequence = 0
 
     def start(self, session_id: str, repo: str) -> dict[str, Any]:
         if not isinstance(session_id, str) or not session_id:
             raise ValueError("session_id is required")
         self.clear()
-        model = self.loader(repo)
-        # Shallow-copy only wrappers that set_attention_model mutates. All trained
-        # MLX arrays remain shared; the cached final model is never reconfigured.
-        preview_model = copy.copy(model)
-        preview_model.encoder = copy.copy(model.encoder)
-        preview_model.encoder.layers = [copy.copy(layer) for layer in model.encoder.layers]
-        preview_model.encoder.set_attention_model("rel_pos_local_attn", (128, 8))
-        self.stream = preview_model.transcribe_stream(
-            context_size=(128, 8), depth=1, keep_original_attention=True
-        )
+        self.model = self.loader(repo)
         self.session_id = session_id
         return {"success": True}
 
     def append(self, session_id: str, sequence: int, audio_b64: str) -> dict[str, Any]:
-        if session_id != self.session_id or self.stream is None:
+        if session_id != self.session_id or self.model is None:
             return {"active": False, "stable": "", "draft": ""}
         if sequence != self.sequence:
             raise ValueError("Preview audio arrived out of order")
@@ -49,21 +40,29 @@ class PreviewSessions:
             raise ValueError("Preview requires up to eight seconds of mono 16 kHz Float32 PCM")
         import numpy as np
         import mlx.core as mx
+        from parakeet_mlx.audio import get_logmel
 
         samples = np.frombuffer(raw, dtype="<f4")
         if not np.isfinite(samples).all():
             raise ValueError("Preview audio contains non-finite samples")
-        self.stream.add_audio(mx.array(samples))
+        self.audio.extend(raw)
+        del self.audio[:max(0, len(self.audio) - 16000 * 4 * 8)]
+        # Re-decode the recent window so a bad partial word cannot corrupt later
+        # updates. No attention swaps, stream decoder state, or allocator clears.
+        window = np.frombuffer(bytes(self.audio), dtype="<f4")
+        mel = get_logmel(mx.array(window), self.model.preprocessor_config)
+        text = extract_parakeet_text(self.model.generate(mel))
         self.sequence += 1
         return {
             "active": True,
-            "stable": "".join(token.text for token in self.stream.finalized_tokens),
-            "draft": "".join(token.text for token in self.stream.draft_tokens),
+            "stable": "",
+            "draft": text,
         }
 
     def clear(self, session_id: str | None = None) -> dict[str, Any]:
         if session_id is None or session_id == self.session_id:
-            self.stream = None
+            self.model = None
+            self.audio.clear()
             self.session_id = None
             self.sequence = 0
         return {"success": True}

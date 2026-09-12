@@ -1,6 +1,6 @@
 # Live draft plus unchanged final transcription
 
-The preview uses the installed Parakeet v2 model and parakeet-mlx 0.3.7 streaming API. No Python dependency, model, decoder setting, microphone-volume setting, or runtime manifest was upgraded or replaced. The existing runtime proved sufficient; a newer version is not required for this feature.
+The preview uses the installed Parakeet v2 model with its normal full-attention decoder. No Python dependency, model, decoder setting, microphone-volume setting, or runtime manifest is upgraded or replaced.
 
 ## Data flow
 
@@ -8,9 +8,11 @@ An optional AVAudioEngine microphone tap runs alongside the established AVAudioR
 
 Preview packets contain 0.8 seconds of audio. The coordinator allows one request in flight, combines queued audio without dropping samples, and reports an unavailable preview if its queue exceeds eight seconds. This bound affects only provisional display; the complete AAC recording continues independently. The UI keeps final transcription available after preview errors or input-device changes.
 
-The same JSON-RPC daemon and cached model serve both paths. Streaming uses separate shallow module wrappers with local attention, a 128-frame left cache, eight-frame provisional right context, and depth 1. All 697 trained parameter arrays share their original identities with the cached model; no second weight allocation or model reload is needed. These are preview-only settings. The final model's established attention objects and positional encoding are never replaced. Local preview attention keeps positional work bounded during long recordings. The eight-frame provisional region is shorter than an input packet; a longer region caused unstable early drafts in the installed library. We release the preview object directly rather than invoking the library context-manager exit, which would unnecessarily clear the shared MLX allocator cache. The full-audio request also clears any remaining preview state before running its unchanged transcription function.
+The same JSON-RPC daemon and cached model serve both paths. Each update decodes the most recent eight seconds of preview audio using the same log-mel conversion and normal model generation as the final pass. This is a rolling live preview, not the library's cached streaming approximation. No model weights, attention objects, positional encoding, or allocator cache are replaced or cleared. The window bounds preview work during long recordings; it does not limit the complete recording or final transcript.
 
-Each recording has a session UUID and ordered packet sequence. Late packets and cleanup messages cannot enter or cancel a new session. Preview text never writes to the clipboard or history. Only the completed final pass does that.
+The earlier 210.8 streaming approximation produced severe recognition errors on ordinary dictation. Re-decoding a rolling window lets new context correct partial words without carrying an erroneous streaming decoder state into the next update. All live words are provisional. The beginning of a rolling window can cut through a word, and the newest word may still be incomplete. Only the independent final pass produces the complete transcript.
+
+Each recording has a session UUID and ordered packet sequence. Late packets and cleanup messages cannot enter or cancel a new session. Preview text never writes to the clipboard or history. Only the completed final pass does that. The full-audio request releases preview PCM before running its unchanged transcription function.
 
 ## Presentation
 
@@ -20,10 +22,10 @@ The final text displays for `clamp(0.65 + words × 0.045, 0.85, 6)` seconds, wit
 
 ## Validation on this Mac
 
-A 45.41-second fixture (the existing acceptance recording repeated with short silences) produced 57 draft updates. In a run without simultaneous compilation, median draft computation was 0.129 seconds, maximum 0.172 seconds, for 0.8-second input packets. This excludes capture/buffering time and is not a general accuracy benchmark. Draft words are provisional and can repeat or change; the independent final pass corrects them.
+On two local dictation recordings of about eight seconds each, the former streaming approximation produced badly incorrect text; normal rolling-window decoding recovered the spoken sentences. Median preview computation was 0.128 and 0.099 seconds respectively, with a maximum of 0.276 seconds. These figures exclude capture/buffering time and are not a general accuracy benchmark. The recordings and their transcripts are not included in the repository.
 
-The final text matched exactly across cold, warm, and post-stream full passes. Cold final inference took 2.534 seconds, warm 1.014 seconds, and the two post-stream finals 1.084/0.949 seconds. The same loaded model and attention object identities were retained. Peak MLX allocation in that process was 2.93 GB. These measurements include one synthetic repetition fixture; real speech and competing workloads may differ.
+A 45.41-second repeated acceptance fixture produced 57 rolling updates: median computation 0.488 seconds, maximum 0.583 seconds, below the 0.8-second packet interval in that run. Final text matched exactly before and after preview, with the same cached model and attention identities. Warm final inference took 1.786 seconds before preview and 1.923/1.571 seconds afterward; peak MLX allocation was 2.93 GB. Timing varies with speech and competing workloads.
 
-An opt-in Swift integration test also sent partial audio through the actual coordinator and JSON-RPC process, observed words before supplying the complete recording, and verified identical final text and the same daemon PID. Other tests cover streaming off, cancellation, old-session isolation, preview failure fallback, settings persistence, and continuous conversion from mono/stereo 44.1/48 kHz audio. Offscreen renders cover listening, finalizing, final copy, and streaming off.
+An opt-in Swift integration test sends partial audio through the actual coordinator and JSON-RPC process, observes words before supplying the complete recording, and verifies that packet-by-packet preview of a short fixture converges exactly to normal full-attention transcription. It also verifies identical final text and the same daemon PID. Other tests cover streaming off, cancellation, old-session isolation, preview failure fallback, settings persistence, and continuous conversion from mono/stereo 44.1/48 kHz audio. Offscreen renders cover listening, finalizing, final copy, and streaming off.
 
-Physical microphone capture alongside the existing recorder requires a live-use check on the installed app; the automated capture tests use supplied audio buffers and do not request microphone access.
+Physical microphone capture alongside the existing recorder was confirmed by the user's live-word report; improved recognition still needs confirmation in live use after the decoder correction.
