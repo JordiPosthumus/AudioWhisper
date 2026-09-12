@@ -4,7 +4,7 @@ SpeedyWhisper is the personal Parakeet v2 fork of [AudioWhisper by mazdak and co
 
 ## Recording and manual paste
 
-The recorder appears at the exact center of the screen containing the pointer, without taking keyboard focus. Its cyan-to-violet waveform displays actual recent microphone levels and its timer tracks the recording. Two compact lines show live Parakeet text; draft words are tinted cyan. The listening display is 380 × 180 points with streaming, or 380 × 112 without it.
+The recorder appears at the exact center of the screen containing the pointer, without taking keyboard focus. Its Knight Rider–inspired red scanner sweeps across voice-reactive bars, with a warm core and trailing glow. Bar heights display actual recent microphone levels, and the timer tracks the recording. The scanner draws a single small canvas at 24 fps only while recording; Reduce Motion keeps the light stationary. Two compact lines show live Parakeet text; draft words are tinted cyan. The listening display is 380 × 180 points with streaming, or 380 × 112 without it.
 
 Stopping still runs the established full-recording Parakeet pass. The final text is copied immediately, the view gives a single glow/check confirmation, and then dismisses automatically. Short phrases remain for 0.85 seconds; longer text receives more scan time, up to six seconds. The user presses ⌘V in their chosen application. There is no Paste button, synthetic paste event, or Accessibility setup. Reduce Motion is respected.
 

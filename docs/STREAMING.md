@@ -16,11 +16,13 @@ Each recording has a session UUID and ordered packet sequence. Late packets and 
 
 ## Presentation
 
-A 380 × 180 point live display shows the last two lines of draft text and a waveform built from 48 actual microphone-level readings at the recorder's existing 10 Hz metering rate. In streaming-off mode the display is 380 × 112. No synthetic waveform activity is generated during silence. The display stays geometrically centered as its size changes.
+A 380 × 180 point live display shows the last two lines of draft text and a waveform built from 48 actual microphone-level readings at the recorder's existing 10 Hz metering rate. In streaming-off mode the display is 380 × 112. The Knight Rider–inspired red scanner moves a decorative light across the waveform at 24 fps; bar height still reflects actual microphone levels, including during silence. The effect uses one 340 × 37 point canvas, 32 segments, and gradient light without particle systems or blur passes. Its animation timeline exists only while recording and is omitted with Reduce Motion enabled. The display stays geometrically centered as its size changes.
 
 The final text displays for `clamp(0.65 + words × 0.045, 0.85, 6)` seconds, with a single completion glow/check animation. Its text area is bounded for long transcripts. Starting another recording or dismissing the display cancels its previous dismissal task. No auto-paste or required confirmation key is introduced.
 
 ## Validation on this Mac
+
+The 210.10 scanner was measured in an isolated optimized SwiftUI preview with 10 Hz changing meter fixtures: 0.493 CPU seconds over eight seconds of animation (6.16% of one CPU core), and 0.00443 CPU seconds over four idle seconds (0.11% of one core). This measures the preview process, not the separate WindowServer/GPU or transcription workload. No microphone or model was used for this graphics check.
 
 On two local dictation recordings of about eight seconds each, the former streaming approximation produced badly incorrect text; normal rolling-window decoding recovered the spoken sentences. Median preview computation was 0.128 and 0.099 seconds respectively, with a maximum of 0.276 seconds. These figures exclude capture/buffering time and are not a general accuracy benchmark. The recordings and their transcripts are not included in the repository.
 
@@ -28,4 +30,4 @@ A 45.41-second repeated acceptance fixture produced 57 rolling updates: median c
 
 An opt-in Swift integration test sends partial audio through the actual coordinator and JSON-RPC process, observes words before supplying the complete recording, and verifies that packet-by-packet preview of a short fixture converges exactly to normal full-attention transcription. It also verifies identical final text and the same daemon PID. Other tests cover streaming off, cancellation, old-session isolation, preview failure fallback, settings persistence, and continuous conversion from mono/stereo 44.1/48 kHz audio. Offscreen renders cover listening, finalizing, final copy, and streaming off.
 
-Physical microphone capture alongside the existing recorder was confirmed by the user's live-word report; improved recognition still needs confirmation in live use after the decoder correction.
+The user confirmed that live dictation works correctly after the 210.9 decoder correction.
