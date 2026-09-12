@@ -240,6 +240,19 @@ cp CREDITS.md ScribeKitt.app/Contents/Resources/CREDITS.md
 # Make executable
 chmod +x ScribeKitt.app/Contents/MacOS/AudioWhisper
 
+# Include reusable Python 3.11 bytecode before signing. Hash-based caches survive
+# archive timestamp changes, and all optimization variants keep later imports
+# from adding unsealed files to the app. Runtime bytecode caching stays enabled.
+BYTECODE_ARGS=(-m compileall -q --invalidation-mode checked-hash -o 0 -o 1 -o 2 ScribeKitt.app/Contents/Resources)
+if [ -x "ScribeKitt.app/Contents/Resources/bin/uv" ]; then
+  ScribeKitt.app/Contents/Resources/bin/uv run --no-project --python 3.11 python "${BYTECODE_ARGS[@]}" || exit 1
+elif command -v python3.11 >/dev/null 2>&1; then
+  python3.11 "${BYTECODE_ARGS[@]}" || exit 1
+else
+  echo "Python 3.11 or bundled uv is required to prepare the app before signing."
+  exit 1
+fi
+
 # Create entitlements file for hardened runtime
 echo "Creating entitlements for hardened runtime..."
 cat >AudioWhisper.entitlements <<'EOF'

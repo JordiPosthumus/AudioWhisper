@@ -32,3 +32,7 @@ Both the fresh runtime and the established runtime passed 57 preview updates acr
 These are local measurements on the development Mac, not latency guarantees for other hardware. The graphics path is unchanged by the rebrand; its existing full-panel benchmark is documented in [STREAMING.md](STREAMING.md).
 
 Final validation: 293 Swift tests passed and two opt-in/snapshot checks were skipped in the full suite; the clean-download integration passed separately. All 19 Python protocol, setup and loader checks passed. The universal release build passed. Existing final-inference, preview-decoding, runtime-manifest and runtime-bootstrap source files remain byte-for-byte unchanged; the loader change is limited to locating the cached snapshot.
+
+## Stable signed resources
+
+Release packaging precompiles Python 3.11 bytecode for all optimization levels before signing. Checked-hash invalidation keeps these caches valid when an archive changes file timestamps. Normal runtime bytecode caching remains enabled; no diagnostic cache-disabling environment flag is used in the app launcher. This prevents ordinary imports from adding unsealed bytecode files to the signed app bundle.
