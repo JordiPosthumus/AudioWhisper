@@ -26,23 +26,28 @@ internal struct DashboardView: View {
         self.selectionModel = selectionModel
     }
 
+    private var selection: Binding<DashboardNavItem> {
+        Binding(
+            get: { selectionModel.selectedNav ?? .recording },
+            set: { selectionModel.selectedNav = $0 }
+        )
+    }
+
     var body: some View {
-        NavigationSplitView {
-            List(DashboardNavItem.allCases, selection: $selectionModel.selectedNav) { item in
-                Label(item.rawValue, systemImage: item.icon)
-                    .tag(item)
+        VStack(spacing: 0) {
+            Picker("Section", selection: selection) {
+                ForEach(DashboardNavItem.allCases) { item in
+                    Text(item.rawValue).tag(item)
+                }
             }
-            .listStyle(.sidebar)
-            // Remove the built-in sidebar toggle to keep the titlebar clean.
-            .toolbar(removing: .sidebarToggle)
-        } detail: {
-            if let selectedNav = selectionModel.selectedNav {
-                detailView(for: selectedNav)
-                    .navigationTitle(selectedNav.rawValue)
-            } else {
-                Text("Select a section in the sidebar")
-                    .frame(maxWidth: .infinity, maxHeight: .infinity)
-            }
+            .pickerStyle(.segmented)
+            .labelsHidden()
+            .frame(maxWidth: 400)
+            .padding(16)
+
+            Divider()
+            detailView(for: selection.wrappedValue)
+                .frame(maxWidth: .infinity, maxHeight: .infinity)
         }
     }
 

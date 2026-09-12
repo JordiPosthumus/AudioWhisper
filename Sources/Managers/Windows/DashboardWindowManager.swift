@@ -48,7 +48,7 @@ internal final class DashboardWindowManager: NSObject {
         
         window.collectionBehavior = [.moveToActiveSpace, .fullScreenAuxiliary]
         window.contentViewController = hostingController
-        window.title = "AudioWhisper Settings"
+        window.title = AppBrand.settingsWindowTitle
         window.setContentSize(initialSize)
         window.minSize = minimumSize
         window.center()

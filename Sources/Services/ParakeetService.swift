@@ -14,7 +14,7 @@ internal enum ParakeetError: Error, LocalizedError, Equatable {
     var errorDescription: String? {
         switch self {
         case .pythonNotFound(let path):
-            return "Python runtime not available at: \(path)\n\nFix:\n• Open the existing AudioWhisper Python runtime"
+            return "Python runtime not available at: \(path)\n\nFix:\n• Open the existing local Python runtime"
         case .scriptNotFound:
             return "Parakeet transcription script not found in app bundle"
         case .transcriptionFailed(let message):
@@ -22,7 +22,7 @@ internal enum ParakeetError: Error, LocalizedError, Equatable {
         case .invalidResponse(let message):
             return "Invalid response from Parakeet: \(message)"
         case .dependencyMissing(let dependency, _):
-            return "\(dependency) is not installed\n\nFix: Open the existing AudioWhisper Python runtime"
+            return "\(dependency) is not installed\n\nFix: Open the existing local Python runtime"
         case .processTimedOut(let timeout):
             return "Transcription timed out after \(timeout) seconds\n\nTry with a shorter audio file or check system resources"
         case .modelNotReady:

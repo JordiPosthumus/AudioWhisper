@@ -32,13 +32,6 @@ internal class WindowController {
     }
     
     func toggleRecordWindow(_ window: NSWindow? = nil, completion: (() -> Void)? = nil) {
-        // Don't show recorder window during first-run welcome experience
-        let hasCompletedWelcome = UserDefaults.standard.bool(forKey: "hasCompletedWelcome")
-        if !hasCompletedWelcome {
-            completion?()
-            return
-        }
-        
         // In test environment, exit early
         if isTestEnvironment {
             completion?()
@@ -47,7 +40,7 @@ internal class WindowController {
         
         // Use provided window or find the recording window by title
         let recordWindow = window ?? NSApp.windows.first { window in
-            window.title == "AudioWhisper Recording"
+            window.title == AppBrand.recordingWindowTitle
         }
         
         if let window = recordWindow {
@@ -173,7 +166,7 @@ internal class WindowController {
         }
 
         // Hide recording window if open to avoid overlap
-        if let recordWindow = NSApp.windows.first(where: { $0.title == "AudioWhisper Recording" }), recordWindow.isVisible {
+        if let recordWindow = NSApp.windows.first(where: { $0.title == AppBrand.recordingWindowTitle }), recordWindow.isVisible {
             recordWindow.orderOut(nil)
         }
 

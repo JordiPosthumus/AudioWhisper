@@ -28,8 +28,8 @@ internal struct PermissionEducationModal: View {
                     .fontWeight(.semibold)
                 
                 Text(enableSmartPaste ? 
-                     "AudioWhisper needs permissions to work properly:" :
-                     "AudioWhisper needs microphone access to record audio:")
+                     "SpeedyWhisper needs permissions to work properly:" :
+                     "SpeedyWhisper needs microphone access to record audio:")
                     .multilineTextAlignment(.center)
                     .foregroundStyle(.secondary)
                 
@@ -85,7 +85,7 @@ internal struct PermissionRecoveryModal: View {
                     .font(.title2)
                     .fontWeight(.semibold)
                 
-                Text("AudioWhisper needs microphone and accessibility permissions to work properly.")
+                Text("SpeedyWhisper needs microphone and accessibility permissions to work properly.")
                     .multilineTextAlignment(.center)
                     .foregroundStyle(.secondary)
                 
@@ -99,13 +99,13 @@ internal struct PermissionRecoveryModal: View {
                     HStack {
                         Text("2.")
                             .fontWeight(.semibold)
-                        Text("Enable AudioWhisper in 'Microphone' section")
+                        Text("Enable SpeedyWhisper in 'Microphone' section")
                     }
                     
                     HStack {
                         Text("3.")
                             .fontWeight(.semibold)
-                        Text("Enable AudioWhisper in 'Accessibility' section")
+                        Text("Enable SpeedyWhisper in 'Accessibility' section")
                     }
                 }
                 .font(.callout)

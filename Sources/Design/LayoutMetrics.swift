@@ -8,18 +8,14 @@ internal enum LayoutMetrics {
     }
     
     enum DashboardWindow {
-        static let initialSize = CGSize(width: 950, height: 700)
-        static let minimumSize = CGSize(width: 800, height: 550)
-        static let previewSize = CGSize(width: 900, height: 700)
-        static let sidebarWidth: CGFloat = 200
+        static let initialSize = CGSize(width: 620, height: 520)
+        static let minimumSize = CGSize(width: 540, height: 420)
+        static let previewSize = CGSize(width: 620, height: 520)
     }
     
     enum TranscriptionHistory {
-        static let minimumSize = CGSize(width: 700, height: 400)
-        static let previewSize = CGSize(width: 700, height: 500)
+        static let minimumSize = CGSize(width: 500, height: 340)
+        static let previewSize = CGSize(width: 600, height: 480)
     }
     
-    enum Welcome {
-        static let windowSize = CGSize(width: 600, height: 650)
-    }
 }

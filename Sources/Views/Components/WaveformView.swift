@@ -49,7 +49,7 @@ internal struct WaveformRecordingView: View {
         HStack(spacing: 8) {
             Image(systemName: "waveform")
                 .font(.system(size: 15, weight: .medium))
-            Text("AudioWhisper")
+            Text(AppBrand.name)
                 .font(.system(size: 15, weight: .semibold))
         }
         .foregroundStyle(Color(nsColor: .labelColor))

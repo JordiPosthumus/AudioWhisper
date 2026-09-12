@@ -66,7 +66,7 @@ internal extension ContentView {
                     isProcessing = false
                 } else {
                     let recordWindow = NSApp.windows.first { window in
-                        window.title == "AudioWhisper Recording"
+                        window.title == AppBrand.recordingWindowTitle
                     }
                     
                     if let window = recordWindow {

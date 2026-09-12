@@ -6,7 +6,7 @@ Removed: WhisperKit, OpenAI/Gemini transcription, semantic correction, model/pro
 
 The recorder uses the system microphone. The former app picker did not configure the recorder; Recording settings now opens macOS Sound input settings to choose the actual input.
 
-File transcription, completion sounds, microphone boosting, and optional Smart Paste remain. They have not been authorized for removal. Paste activation uses the tested activation waiter and only the captured target app.
+Microphone boosting remains explicitly enabled at the owner's request. File transcription, completion sounds, and optional Smart Paste also remain; their removal has not been authorized. Paste activation uses the tested activation waiter and only the captured target app.
 
 Existing preferences, history, downloaded models, Hugging Face caches, Python environment, dependency versions, inference settings, and daemon cache behavior are preserved. The stored history schema and legacy provider/model metadata remain readable. New transcripts do not collect source-app icons or usage metrics. Legacy statistics remain on disk. The Python dependency manifest intentionally remains unchanged to avoid `uv sync` changing the established environment; unused correction packages are not imported by the slim daemon.
 

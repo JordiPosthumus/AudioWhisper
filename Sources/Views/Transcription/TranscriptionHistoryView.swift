@@ -35,16 +35,11 @@ internal struct TranscriptionHistoryView: View {
     }
     
     var body: some View {
-        VSplitView {
-            listPane
-                .frame(minHeight: 260)
+        VStack(spacing: 0) {
+            HStack(spacing: 10) {
+                TextField("Search transcripts", text: $searchText)
+                    .textFieldStyle(.roundedBorder)
 
-            detailPane
-                .frame(minHeight: 180)
-        }
-        .searchable(text: $searchText)
-        .toolbar {
-            ToolbarItemGroup(placement: .primaryAction) {
                 Button {
                     copySelectedToClipboard()
                 } label: {
@@ -52,19 +47,29 @@ internal struct TranscriptionHistoryView: View {
                 }
                 .disabled(selectedRecords.isEmpty)
 
-                Button(role: .destructive) {
-                    showDeleteSelectedConfirmation = true
-                } label: {
-                    Label("Delete", systemImage: "trash")
-                }
-                .disabled(selectedRecords.isEmpty || isBusy)
+                Menu {
+                    Button("Delete Selected…", role: .destructive) {
+                        showDeleteSelectedConfirmation = true
+                    }
+                    .disabled(selectedRecords.isEmpty || isBusy)
 
-                Button(role: .destructive) {
-                    showClearAllConfirmation = true
+                    Button("Clear All History…", role: .destructive) {
+                        showClearAllConfirmation = true
+                    }
+                    .disabled(allRecords.isEmpty || isBusy)
                 } label: {
-                    Text("Clear All")
+                    Image(systemName: "ellipsis.circle")
                 }
-                .disabled(allRecords.isEmpty || isBusy)
+                .menuStyle(.borderlessButton)
+                .fixedSize()
+                .help("History actions")
+            }
+            .padding(12)
+
+            Divider()
+            VSplitView {
+                listPane.frame(minHeight: 160)
+                detailPane.frame(minHeight: 120)
             }
         }
         .onDeleteCommand {

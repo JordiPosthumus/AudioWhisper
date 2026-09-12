@@ -128,3 +128,7 @@ __pycache__
 AudioWhisper.iconset/
 .build-uv/
 .beads/
+
+# Branded app artifacts
+SpeedyWhisper.app/
+SpeedyWhisper.zip

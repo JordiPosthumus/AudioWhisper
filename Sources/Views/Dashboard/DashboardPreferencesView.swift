@@ -27,7 +27,7 @@ internal struct DashboardPreferencesView: View {
                 Toggle(isOn: $startAtLogin) {
                     VStack(alignment: .leading, spacing: 2) {
                         Text("Start at Login")
-                        Text("Launch AudioWhisper when you sign in.")
+                        Text("Launch SpeedyWhisper when you sign in.")
                             .font(.caption)
                             .foregroundStyle(.secondary)
                     }
@@ -99,7 +99,7 @@ internal struct DashboardPreferencesView: View {
             } header: {
                 Text("History")
             } footer: {
-                Text("View saved transcripts in the Transcripts section in the sidebar.")
+                Text("View saved transcripts in the Transcripts tab.")
             }
 
             Section("About") {

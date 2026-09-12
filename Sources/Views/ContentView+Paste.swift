@@ -30,6 +30,6 @@ internal extension ContentView {
     }
 
     func hideRecordingWindow() {
-        NSApp.windows.first { $0.title == "AudioWhisper Recording" }?.orderOut(nil)
+        NSApp.windows.first { $0.title == AppBrand.recordingWindowTitle }?.orderOut(nil)
     }
 }
