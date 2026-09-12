@@ -31,13 +31,22 @@ internal enum SpeechToTextError: Error, LocalizedError {
 
 @Observable
 internal class SpeechToTextService {
+    private let defaults: UserDefaults
+    private let session: Session
+    private static let geminiInlineLimit: Int64 = 5 * 1024 * 1024
     private let localWhisperService = LocalWhisperService()
     private let parakeetService = ParakeetService()
     private let keychainService: KeychainServiceProtocol
     private let correctionService = SemanticCorrectionService()
     
-    init(keychainService: KeychainServiceProtocol = KeychainService.shared) {
+    init(
+        keychainService: KeychainServiceProtocol = KeychainService.shared,
+        defaults: UserDefaults = .standard,
+        session: Session = AF
+    ) {
         self.keychainService = keychainService
+        self.defaults = defaults
+        self.session = session
     }
     
     // Raw transcription without semantic correction
@@ -65,8 +74,8 @@ internal class SpeechToTextService {
     }
 
     func transcribe(audioURL: URL) async throws -> String {
-        let useOpenAI = UserDefaults.standard.bool(forKey: "useOpenAI")
-        if useOpenAI != false { // Default to OpenAI if not set
+        let useOpenAI = defaults.object(forKey: "useOpenAI") as? Bool ?? true
+        if useOpenAI { // Default to OpenAI if not set
             let text = try await transcribeWithOpenAI(audioURL: audioURL)
             return await correctionService.correct(text: text, providerUsed: .openai)
         } else {
@@ -105,7 +114,7 @@ internal class SpeechToTextService {
     }
     
     private var geminiBaseURL: String {
-        let custom = UserDefaults.standard.string(forKey: "geminiBaseURL") ?? ""
+        let custom = defaults.string(forKey: "geminiBaseURL") ?? ""
         if custom.isEmpty {
             return "https://generativelanguage.googleapis.com"
         }
@@ -117,7 +126,7 @@ internal class SpeechToTextService {
     /// If the custom URL contains "audio/transcriptions", it's treated as a full endpoint.
     /// Otherwise, "/audio/transcriptions" is appended to the base URL.
     private var openAITranscriptionEndpoint: String {
-        let custom = UserDefaults.standard.string(forKey: "openAIBaseURL") ?? ""
+        let custom = defaults.string(forKey: "openAIBaseURL") ?? ""
         if custom.isEmpty {
             return "https://api.openai.com/v1/audio/transcriptions"
         }
@@ -133,7 +142,7 @@ internal class SpeechToTextService {
 
     /// Detects if the endpoint is Azure OpenAI based on the URL pattern
     private var isAzureOpenAI: Bool {
-        let custom = UserDefaults.standard.string(forKey: "openAIBaseURL") ?? ""
+        let custom = defaults.string(forKey: "openAIBaseURL") ?? ""
         return custom.contains(".openai.azure.com")
     }
 
@@ -154,7 +163,7 @@ internal class SpeechToTextService {
         let transcriptionURL = openAITranscriptionEndpoint
 
         return try await withCheckedThrowingContinuation { continuation in
-            AF.upload(
+            session.upload(
                 multipartFormData: { multipartFormData in
                     multipartFormData.append(audioURL, withName: "file")
                     // Azure deployments already specify the model, but it doesn't hurt to include
@@ -185,8 +194,8 @@ internal class SpeechToTextService {
         let fileAttributes = try FileManager.default.attributesOfItem(atPath: audioURL.path)
         let fileSize = fileAttributes[.size] as? Int64 ?? 0
         
-        // Use Files API for larger files (>10MB) to avoid memory issues
-        if fileSize > 10 * 1024 * 1024 {
+        // Use the same threshold as the inline guard so 5–10 MB files are not rejected.
+        if fileSize > Self.geminiInlineLimit {
             return try await transcribeWithGeminiFilesAPI(audioURL: audioURL, apiKey: apiKey)
         } else {
             return try await transcribeWithGeminiInline(audioURL: audioURL, apiKey: apiKey)
@@ -203,7 +212,7 @@ internal class SpeechToTextService {
         
         // Upload file using multipart form data
         let uploadedFile = try await withCheckedThrowingContinuation { (continuation: CheckedContinuation<GeminiFileResponse, Error>) in
-            AF.upload(
+            session.upload(
                 multipartFormData: { multipartFormData in
                     multipartFormData.append(audioURL, withName: "file")
                     let metadata = ["file": ["display_name": "audio_recording"]]
@@ -236,7 +245,7 @@ internal class SpeechToTextService {
             "contents": [[
                 "parts": [[
                     "file_data": [
-                        "mime_type": "audio/mp4",
+                        "mime_type": Self.audioMIMEType(for: audioURL),
                         "file_uri": uploadedFile.file.uri
                     ]
                 ], [
@@ -246,7 +255,7 @@ internal class SpeechToTextService {
         ]
         
         return try await withCheckedThrowingContinuation { continuation in
-            AF.request(transcriptionURL, method: .post, parameters: body, encoding: JSONEncoding.default, headers: headers)
+            session.request(transcriptionURL, method: .post, parameters: body, encoding: JSONEncoding.default, headers: headers)
                 .responseDecodable(of: GeminiResponse.self) { response in
                     switch response.result {
                     case .success(let geminiResponse):
@@ -270,7 +279,7 @@ internal class SpeechToTextService {
         let fileSize = fileAttributes[.size] as? Int64 ?? 0
         
         // Enforce stricter memory limit for inline processing
-        if fileSize > 5 * 1024 * 1024 { // 5MB limit
+        if fileSize > Self.geminiInlineLimit {
             throw SpeechToTextError.fileTooLarge
         }
         
@@ -292,7 +301,7 @@ internal class SpeechToTextService {
             "contents": [[
                 "parts": [[
                     "inline_data": [
-                        "mime_type": "audio/mp4",
+                        "mime_type": Self.audioMIMEType(for: audioURL),
                         "data": base64Audio
                     ]
                 ], [
@@ -302,7 +311,7 @@ internal class SpeechToTextService {
         ]
         
         return try await withCheckedThrowingContinuation { continuation in
-            AF.request(url, method: .post, parameters: body, encoding: JSONEncoding.default, headers: headers)
+            session.request(url, method: .post, parameters: body, encoding: JSONEncoding.default, headers: headers)
                 .responseDecodable(of: GeminiResponse.self) { response in
                     switch response.result {
                     case .success(let geminiResponse):
@@ -334,7 +343,7 @@ internal class SpeechToTextService {
         guard Arch.isAppleSilicon else {
             throw SpeechToTextError.transcriptionFailed("Parakeet requires an Apple Silicon Mac.")
         }
-        let modeRaw = UserDefaults.standard.string(forKey: "semanticCorrectionMode") ?? SemanticCorrectionMode.off.rawValue
+        let modeRaw = defaults.string(forKey: "semanticCorrectionMode") ?? SemanticCorrectionMode.off.rawValue
         let semanticCorrectionMode = SemanticCorrectionMode(rawValue: modeRaw) ?? .off
         let shouldWarmup = semanticCorrectionMode != .off
         // Ensure managed Python environment with uv
@@ -342,7 +351,7 @@ internal class SpeechToTextService {
         let pythonPath = pyURL.path
         do {
             if shouldWarmup {
-                let modelRepo = UserDefaults.standard.string(forKey: AppDefaults.Keys.semanticCorrectionModelRepo) ?? AppDefaults.defaultSemanticCorrectionModelRepo
+                let modelRepo = defaults.string(forKey: AppDefaults.Keys.semanticCorrectionModelRepo) ?? AppDefaults.defaultSemanticCorrectionModelRepo
                 async let warmupTask: Void = MLDaemonManager.shared.warmup(type: "mlx", repo: modelRepo)
                 async let transcription = parakeetService.transcribe(audioFileURL: audioURL, pythonPath: pythonPath)
                 let (text, _) = try await (transcription, warmupTask)
@@ -360,6 +369,18 @@ internal class SpeechToTextService {
         }
     }
     
+    private static func audioMIMEType(for url: URL) -> String {
+        switch url.pathExtension.lowercased() {
+        case "wav": return "audio/wav"
+        case "mp3": return "audio/mpeg"
+        case "aac": return "audio/aac"
+        case "aiff", "aif": return "audio/aiff"
+        case "caf": return "audio/x-caf"
+        case "flac": return "audio/flac"
+        default: return "audio/mp4"
+        }
+    }
+
     // MARK: - Text Cleaning
     
     /// Cleans transcription text by removing common markers and artifacts
