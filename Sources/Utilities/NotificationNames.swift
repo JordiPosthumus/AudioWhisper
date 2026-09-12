@@ -22,7 +22,6 @@ internal extension Notification.Name {
     // MARK: - Keyboard Events
     static let spaceKeyPressed = Notification.Name("SpaceKeyPressed")
     static let escapeKeyPressed = Notification.Name("EscapeKeyPressed")
-    static let returnKeyPressed = Notification.Name("ReturnKeyPressed")
     static let pressAndHoldSettingsChanged = Notification.Name("PressAndHoldSettingsChanged")
     
     // MARK: - Error Handling and Retry

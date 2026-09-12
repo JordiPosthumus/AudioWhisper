@@ -49,12 +49,6 @@ internal class KeyboardEventHandler {
             return nil // Consume the event
         }
         
-        // Handle return key
-        if key == String(Character(UnicodeScalar(13)!)) || key == "\r" { // Return/Enter
-            NotificationCenter.default.post(name: .returnKeyPressed, object: nil)
-            return nil // Consume the event
-        }
-        
         // Allow ⌘, for opening dashboard/settings replacement
         if key == "," && modifiers.contains(.command) {
             Task { @MainActor in

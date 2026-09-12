@@ -33,41 +33,21 @@ internal enum PermissionState {
 @Observable
 internal class PermissionManager {
     var microphonePermissionState: PermissionState = .unknown
-    var accessibilityPermissionState: PermissionState = .unknown
     var showEducationalModal = false
     var showRecoveryModal = false
-    private let defaults: UserDefaults
     private let isTestEnvironment: Bool
-    private let accessibilityManager = AccessibilityPermissionManager()
     
-    var allPermissionsGranted: Bool {
-        let enableSmartPaste = defaults.bool(forKey: "enableSmartPaste")
-        if enableSmartPaste {
-            return microphonePermissionState == .granted && accessibilityPermissionState == .granted
-        } else {
-            return microphonePermissionState == .granted
-        }
-    }
-    
+    var allPermissionsGranted: Bool { microphonePermissionState == .granted }
+
     init(defaults: UserDefaults = .standard) {
-        self.defaults = defaults
         // Detect if running in tests
         isTestEnvironment = NSClassFromString("XCTestCase") != nil
     }
     
     func checkPermissionState() {
         checkMicrophonePermission()
-        
-        // Only check Accessibility if SmartPaste is enabled
-        let enableSmartPaste = defaults.bool(forKey: "enableSmartPaste")
-        if enableSmartPaste {
-            checkAccessibilityPermission()
-        } else {
-            // Reset accessibility state if SmartPaste is disabled
-            accessibilityPermissionState = .granted // Consider it "granted" since it's not needed
-        }
     }
-    
+
     private func checkMicrophonePermission() {
         let status = AVCaptureDevice.authorizationStatus(for: .audio)
 
@@ -85,29 +65,14 @@ internal class PermissionManager {
         }
     }
     
-    private func checkAccessibilityPermission() {
-        // Use dedicated AccessibilityPermissionManager for consistent checking
-        let trusted = accessibilityManager.checkPermission()
-
-        self.accessibilityPermissionState = trusted ? .granted : .notRequested
-    }
-    
     func requestPermissionWithEducation() {
-        let enableSmartPaste = defaults.bool(forKey: "enableSmartPaste")
-        
-        let needsMicrophone = microphonePermissionState.needsRequest
-        let needsAccessibility = enableSmartPaste && accessibilityPermissionState.needsRequest
-        
-        let canRetryMicrophone = microphonePermissionState.canRetry
-        let canRetryAccessibility = enableSmartPaste && accessibilityPermissionState.canRetry
-        
-        if needsMicrophone || needsAccessibility {
+        if microphonePermissionState.needsRequest {
             showEducationalModal = true
-        } else if canRetryMicrophone || canRetryAccessibility {
+        } else if microphonePermissionState.canRetry {
             showRecoveryModal = true
         }
     }
-    
+
     func proceedWithPermissionRequest() {
         if isTestEnvironment {
             // In tests, simulate permission behavior without actual system dialog
@@ -115,23 +80,14 @@ internal class PermissionManager {
                 try? await Task.sleep(for: .milliseconds(100))
                 // Simulate denied for consistent test behavior
                 self.microphonePermissionState = .denied
-                let enableSmartPaste = defaults.bool(forKey: "enableSmartPaste")
-                if enableSmartPaste {
-                    self.accessibilityPermissionState = .denied
-                }
                 self.showRecoveryModal = true
             }
         } else {
             requestMicrophonePermission()
             
-            // Only request Accessibility if SmartPaste is enabled
-            let enableSmartPaste = defaults.bool(forKey: "enableSmartPaste")
-            if enableSmartPaste {
-                requestAccessibilityPermission()
-            }
         }
     }
-    
+
     private func requestMicrophonePermission() {
         if microphonePermissionState.needsRequest {
             microphonePermissionState = .requesting
@@ -144,22 +100,8 @@ internal class PermissionManager {
         }
     }
     
-    private func requestAccessibilityPermission() {
-        if accessibilityPermissionState.needsRequest {
-            accessibilityPermissionState = .requesting
-            
-            // Use dedicated AccessibilityPermissionManager for proper explanation and handling
-            accessibilityManager.requestPermissionWithExplanation { [weak self] granted in
-                Task { @MainActor [weak self] in
-                    self?.accessibilityPermissionState = granted ? .granted : .denied
-                    self?.checkIfAllPermissionsHandled()
-                }
-            }
-        }
-    }
-    
     private func checkIfAllPermissionsHandled() {
-        let hasFailures = microphonePermissionState == .denied || accessibilityPermissionState == .denied
+        let hasFailures = microphonePermissionState == .denied
         if hasFailures && !showRecoveryModal {
             Task { @MainActor in
                 try? await Task.sleep(for: .milliseconds(500))
@@ -174,8 +116,8 @@ internal class PermissionManager {
             return
         }
         
-        // Open the main Privacy & Security preferences
-        guard let url = URL(string: "x-apple.systempreferences:com.apple.preference.security") else {
+        // Open the microphone permission pane directly
+        guard let url = URL(string: "x-apple.systempreferences:com.apple.preference.security?Privacy_Microphone") else {
             return
         }
         NSWorkspace.shared.open(url)

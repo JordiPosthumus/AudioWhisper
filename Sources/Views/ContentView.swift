@@ -5,7 +5,6 @@ internal struct ContentView: View {
     @ObservedObject var audioRecorder: AudioRecorder
     @AppStorage(AppDefaults.Keys.immediateRecording) var immediateRecording = false
     @State var parakeetService: ParakeetService
-    @State var pasteManager = PasteManager()
     @State var statusViewModel = StatusViewModel()
     @State var permissionManager = PermissionManager()
     @StateObject var soundManager = SoundManager()
@@ -15,20 +14,13 @@ internal struct ContentView: View {
     @State var showError = false
     @State var errorMessage = ""
     @State var showSuccess = false
-    @State var previewText = ""
-    @State var pasteMessage: String?
-    @State var isPasting = false
-    @State var pasteTask: Task<Void, Never>?
     @State var isHovered = false
     @State var isHandlingSpaceKey = false
     @State var processingTask: Task<Void, Never>?
     @State var transcriptionProgressObserver: NSObjectProtocol?
     @State var spaceKeyObserver: NSObjectProtocol?
     @State var escapeKeyObserver: NSObjectProtocol?
-    @State var returnKeyObserver: NSObjectProtocol?
-    @State var targetAppObserver: NSObjectProtocol?
     @State var recordingFailedObserver: NSObjectProtocol?
-    @State var targetAppForPaste: NSRunningApplication?
     @State var windowFocusObserver: NSObjectProtocol?
     @State var retryObserver: NSObjectProtocol?
     @State var showAudioFileObserver: NSObjectProtocol?
@@ -52,16 +44,10 @@ internal struct ContentView: View {
             status: statusViewModel.currentStatus,
             audioLevel: audioRecorder.audioLevel,
             recordingStartedAt: audioRecorder.currentSessionStart,
-            transcript: showSuccess ? previewText : nil,
-            targetName: findValidTargetApp()?.localizedName,
-            message: pasteMessage,
-            isPasting: isPasting,
             onPrimaryAction: {
                 if audioRecorder.isRecording { stopAndProcess() }
                 else if !isProcessing { startRecording() }
             },
-            onCopy: copyPreview,
-            onPaste: performUserTriggeredPaste,
             onDismiss: dismissRecorder
         )
         .sheet(isPresented: $permissionManager.showEducationalModal) {
@@ -107,7 +93,6 @@ internal struct ContentView: View {
             updateStatus()
             updateRecordingWindowSize()
         }
-        .onChange(of: pasteMessage) { _, _ in updateRecordingWindowSize() }
         .onChange(of: showError) { _, newValue in
             updateStatus()
             if newValue {

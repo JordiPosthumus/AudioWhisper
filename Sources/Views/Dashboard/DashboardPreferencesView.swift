@@ -53,7 +53,7 @@ internal struct DashboardPreferencesView: View {
                     }
                 }
 
-                LabeledContent("Paste", value: "Review, then press Enter")
+                LabeledContent("Paste", value: "Copied automatically; paste with ⌘V")
 
                 Toggle(isOn: $playCompletionSound) {
                     VStack(alignment: .leading, spacing: 2) {

@@ -17,7 +17,7 @@ final class RecorderPresentationTests: XCTestCase {
         XCTAssertEqual((0..<12).filter { AudioLevelDisplay.isLit(index: $0, count: 12, level: 1) }.count, 12)
     }
 
-    func testPreviewExpansionKeepsBottomAnchorAndStaysOnScreen() {
+    func testRecorderResizingKeepsBottomAnchorAndStaysOnScreen() {
         let screen = CGRect(x: 1440, y: -200, width: 1440, height: 900)
         let bar = CGRect(x: 2700, y: 660, width: 224, height: 64)
         let preview = RecorderWindowGeometry.resized(bar, to: CGSize(width: 380, height: 272), inside: screen)
@@ -30,16 +30,8 @@ final class RecorderPresentationTests: XCTestCase {
         XCTAssertEqual(lowPreview.midX, lowBar.midX)
     }
 
-    func testPreviewFitsShortTextAndBoundsLongText() {
-        let short = RecorderWindowGeometry.previewSize(text: "Hello", message: nil)
-        let long = RecorderWindowGeometry.previewSize(text: String(repeating: "A long transcript with many words. ", count: 500), message: nil)
-        XCTAssertLessThan(short.height, long.height)
-        XCTAssertLessThanOrEqual(long.height, 296)
-        XCTAssertGreaterThan(RecorderWindowGeometry.previewSize(text: "Hello", message: "Copied").height, short.height)
-    }
-
     @MainActor
-    func testBorderlessRecorderCanReceiveEnterAndEscape() {
+    func testBorderlessRecorderCanReceiveEscape() {
         let window = ChromelessWindow(contentRect: CGRect(x: 0, y: 0, width: 224, height: 64), styleMask: [.borderless], backing: .buffered, defer: true)
         XCTAssertTrue(window.canBecomeKey)
     }

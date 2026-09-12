@@ -1,33 +1,20 @@
 import SwiftUI
 
-/// A live meter while speaking, then a persistent, explicit transcript review.
+/// A compact live meter. Completed transcripts go to the clipboard and the HUD hides.
 internal struct FloatingRecorderView: View {
     let status: AppStatus
     let audioLevel: Float
     let recordingStartedAt: Date?
-    let transcript: String?
-    let targetName: String?
-    let message: String?
-    let isPasting: Bool
     let onPrimaryAction: () -> Void
-    let onCopy: () -> Void
-    let onPaste: () -> Void
     let onDismiss: () -> Void
 
     private let accent = Color(red: 0.20, green: 0.85, blue: 0.95)
     private var recording: Bool { if case .recording = status { return true }; return false }
     private var processing: Bool { if case .processing = status { return true }; return false }
     private var level: Double { AudioLevelDisplay.clamped(audioLevel) }
-    private var size: CGSize {
-        transcript.map { RecorderWindowGeometry.previewSize(text: $0, message: message) } ?? LayoutMetrics.RecordingWindow.size
-    }
-
     var body: some View {
-        Group {
-            if let transcript { preview(transcript) }
-            else { recordingBar }
-        }
-        .frame(width: size.width, height: size.height)
+        recordingBar
+        .frame(width: LayoutMetrics.RecordingWindow.size.width, height: LayoutMetrics.RecordingWindow.size.height)
         .background(Color(red: 0.055, green: 0.075, blue: 0.11))
         .clipShape(RoundedRectangle(cornerRadius: LayoutMetrics.RecordingWindow.cornerRadius, style: .continuous))
         .overlay(RoundedRectangle(cornerRadius: LayoutMetrics.RecordingWindow.cornerRadius, style: .continuous)
@@ -79,65 +66,6 @@ internal struct FloatingRecorderView: View {
             closeButton
         }
         .padding(.horizontal, 11)
-    }
-
-    private func preview(_ text: String) -> some View {
-        VStack(alignment: .leading, spacing: 12) {
-            HStack(spacing: 9) {
-                Image(systemName: "waveform")
-                    .foregroundStyle(accent)
-                Text("Ready to paste")
-                    .font(.system(size: 13, weight: .semibold))
-                Spacer()
-                closeButton
-            }
-
-            ScrollView {
-                Text(text)
-                    .font(.system(size: 15))
-                    .lineSpacing(4)
-                    .textSelection(.enabled)
-                    .frame(maxWidth: .infinity, alignment: .topLeading)
-            }
-            .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .topLeading)
-
-            if let message {
-                Text(message)
-                    .font(.system(size: 11))
-                    .foregroundStyle(accent)
-                    .lineLimit(2)
-            }
-
-            HStack(spacing: 8) {
-                Button(action: onCopy) { Label("Copy", systemImage: "doc.on.doc") }
-                    .buttonStyle(.bordered)
-                    .disabled(isPasting)
-                Spacer()
-                Button(action: onPaste) {
-                    HStack(spacing: 7) {
-                        if isPasting { ProgressView().controlSize(.mini) }
-                        Text(isPasting ? "Pasting…" : "Paste")
-                        if !isPasting { Image(systemName: "return") }
-                    }
-                    .font(.system(size: 13, weight: .semibold))
-                    .padding(.horizontal, 13)
-                    .padding(.vertical, 7)
-                    .background(accent, in: RoundedRectangle(cornerRadius: 8))
-                }
-                .buttonStyle(.plain)
-                .foregroundStyle(.black)
-                .disabled(isPasting)
-                .help(targetName.map { "Paste into \($0)" } ?? "Paste into the app you were using")
-            }
-            .controlSize(.regular)
-
-            Text(targetName.map { "To \($0) · Enter to paste · Esc to dismiss" } ?? "Enter to paste · Esc to dismiss")
-                .font(.system(size: 10))
-                .foregroundStyle(.white.opacity(0.48))
-                .lineLimit(1)
-        }
-        .padding(16)
-        .foregroundStyle(.white)
     }
 
     private var closeButton: some View {

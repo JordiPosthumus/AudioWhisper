@@ -2,7 +2,7 @@
 
 <p align="center"><img src="SpeedyWhisperIcon.png" width="128" alt="SpeedyWhisper app icon"></p>
 
-A small, local macOS dictation app: speak, review, and press Enter to paste.
+A small, local macOS dictation app: speak, then paste with ⌘V.
 
 **Built on [AudioWhisper by mazdak and contributors](https://github.com/mazdak/AudioWhisper).** The original [MIT license](LICENSE) is preserved. See [Credits](CREDITS.md).
 
@@ -10,11 +10,11 @@ A small, local macOS dictation app: speak, review, and press Enter to paste.
 
 - Start dictation with your existing hotkey or press-and-hold shortcut.
 - A small floating orb appears immediately. Its ring and meter follow the actual microphone level.
-- Stop recording. The bar expands into a transcript preview.
-- Press **Enter** or click **Paste** to insert into the app you were using. **Copy** remains available; **Escape** dismisses the preview or cancels recording.
+- Stop recording. The bar shows transcription progress, then disappears automatically.
+- The completed text is copied to your clipboard. Press **⌘V** yourself wherever you want to paste. **Escape** cancels recording.
 - History, recording preferences, and launch at login live in a compact settings window.
 
-Paste requires macOS Accessibility permission. Transcripts are copied to the clipboard as a fallback. The app waits for the captured application to activate before sending the paste command; it never chooses an arbitrary replacement app.
+No Accessibility permission or paste setup is required. The app never sends paste keystrokes. The current backend transcribes after recording stops; it does not stream partial words.
 
 ## This fork
 

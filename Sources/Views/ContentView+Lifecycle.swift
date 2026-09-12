@@ -64,28 +64,6 @@ internal extension ContentView {
             }
         }
         
-        returnKeyObserver = NotificationCenter.default.addObserver(
-            forName: .returnKeyPressed,
-            object: nil,
-            queue: .main
-        ) { _ in
-            Task { @MainActor in
-                if showSuccess { performUserTriggeredPaste() }
-            }
-        }
-        
-        targetAppObserver = NotificationCenter.default.addObserver(
-            forName: .targetAppStored,
-            object: nil,
-            queue: .main
-        ) { notification in
-            Task { @MainActor in
-                if let app = notification.object as? NSRunningApplication {
-                    targetAppForPaste = app
-                }
-            }
-        }
-        
         recordingFailedObserver = NotificationCenter.default.addObserver(
             forName: .recordingStartFailed,
             object: nil,
@@ -128,8 +106,6 @@ internal extension ContentView {
         removeObserver(&transcriptionProgressObserver)
         removeObserver(&spaceKeyObserver)
         removeObserver(&escapeKeyObserver)
-        removeObserver(&returnKeyObserver)
-        removeObserver(&targetAppObserver)
         removeObserver(&recordingFailedObserver)
         removeObserver(&windowFocusObserver)
         removeObserver(&retryObserver)

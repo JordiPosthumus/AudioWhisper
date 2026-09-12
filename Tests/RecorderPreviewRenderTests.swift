@@ -13,14 +13,11 @@ final class RecorderPreviewRenderTests: XCTestCase {
         let directory = URL(fileURLWithPath: destination, isDirectory: true)
         try FileManager.default.createDirectory(at: directory, withIntermediateDirectories: true)
         let recording = FloatingRecorderView(status: .recording, audioLevel: 0.7, recordingStartedAt: nil,
-            transcript: nil, targetName: nil, message: nil, isPasting: false,
-            onPrimaryAction: {}, onCopy: {}, onPaste: {}, onDismiss: {})
-        let preview = FloatingRecorderView(status: .success, audioLevel: 0, recordingStartedAt: nil,
-            transcript: "SpeedyWhisper keeps dictation simple. Speak, review your words, then press Enter to paste.",
-            targetName: "TextEdit", message: nil, isPasting: false,
-            onPrimaryAction: {}, onCopy: {}, onPaste: {}, onDismiss: {})
+            onPrimaryAction: {}, onDismiss: {})
+        let processing = FloatingRecorderView(status: .processing("Transcribing"), audioLevel: 0, recordingStartedAt: nil,
+            onPrimaryAction: {}, onDismiss: {})
         try render(recording, to: directory.appendingPathComponent("recorder.png"), size: LayoutMetrics.RecordingWindow.size)
-        try render(preview, to: directory.appendingPathComponent("preview.png"), size: RecorderWindowGeometry.previewSize(text: preview.transcript!, message: nil))
+        try render(processing, to: directory.appendingPathComponent("processing.png"), size: LayoutMetrics.RecordingWindow.size)
     }
 
     private func render<V: View>(_ view: V, to url: URL, size: CGSize) throws {

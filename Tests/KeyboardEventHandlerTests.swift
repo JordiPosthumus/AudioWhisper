@@ -71,17 +71,11 @@ final class KeyboardEventHandlerTests: XCTestCase {
         wait(for: [expectation], timeout: 1)
     }
 
-    func testReturnKeyPostsNotificationAndConsumesEvent() {
-        let expectation = expectation(forNotification: .returnKeyPressed, object: nil)
+    func testReturnKeyPassesThroughWithoutPasting() {
         guard let event = keyEvent(characters: "\r", keyCode: 36) else {
-            XCTFail("Failed to create key event")
-            return
+            return XCTFail("Failed to create key event")
         }
-
-        let result = handler.handleKeyEvent(event, for: window)
-
-        XCTAssertNil(result)
-        wait(for: [expectation], timeout: 1)
+        XCTAssertTrue(handler.handleKeyEvent(event, for: window) === event)
     }
 
     func testCommandCommaConsumesEvent() {
