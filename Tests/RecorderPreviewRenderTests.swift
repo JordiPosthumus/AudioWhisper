@@ -26,6 +26,17 @@ final class RecorderPreviewRenderTests: XCTestCase {
         let longText = String(repeating: "A beautiful, quiet space for your words. Speak naturally and let the final pass bring everything together. ", count: 6)
         try render(FloatingRecorderView(status: .success, audioLevel: 0, recordingStartedAt: nil, finalText: longText, onPrimaryAction: {}, onDismiss: {}),
                    to: directory.appendingPathComponent("complete-long.png"), size: TranscriptPresentation.size(finalText: longText, live: false))
+        let paragraph = String(repeating: "The transcript grows with the conversation, keeping complete thoughts visible beside the familiar voice display. ", count: 15)
+        try render(FloatingRecorderView(status: .recording, audioLevel: 0.7, recordingStartedAt: Date().addingTimeInterval(-65),
+            waveformSamples: Array(repeating: 0.7, count: 48), stableText: String(paragraph.dropLast(120)), draftText: String(paragraph.suffix(120)), streaming: true, onPrimaryAction: {}, onDismiss: {}),
+            to: directory.appendingPathComponent("streaming-long.png"),
+            size: TranscriptPresentation.size(finalText: nil, live: true, liveText: paragraph))
+        let hugeText = String(repeating: paragraph, count: 8)
+        let smallerScreen = CGSize(width: 800, height: 600)
+        try render(FloatingRecorderView(status: .success, audioLevel: 0, recordingStartedAt: nil,
+            finalText: hugeText, availableSize: smallerScreen, onPrimaryAction: {}, onDismiss: {}),
+            to: directory.appendingPathComponent("complete-overflow.png"),
+            size: TranscriptPresentation.size(finalText: hugeText, live: false, available: smallerScreen))
         let offline = FloatingRecorderView(status: .recording, audioLevel: 0, recordingStartedAt: nil, onPrimaryAction: {}, onDismiss: {})
         try render(offline, to: directory.appendingPathComponent("streaming-off.png"), size: TranscriptPresentation.size(finalText: nil, live: false))
     }

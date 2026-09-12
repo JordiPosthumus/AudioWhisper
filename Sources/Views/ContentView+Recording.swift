@@ -42,6 +42,8 @@ internal extension ContentView {
         showSuccess = false
         completionTask?.cancel()
         finalText = nil
+        transcriptPasteboardChangeCount = nil
+        transcriptWasPasted = false
         transcriptionStartTime = Date()
         progressMessage = "Transcribing..."
         lastAudioURL = audioURL
@@ -59,6 +61,7 @@ internal extension ContentView {
                 guard TranscriptClipboard.copy(text) else {
                     throw NSError(domain: "SpeedyWhisper.Clipboard", code: 1, userInfo: [NSLocalizedDescriptionKey: "Could not copy the transcript. Please retry."])
                 }
+                transcriptPasteboardChangeCount = NSPasteboard.general.changeCount
                 if DataManager.shared.isHistoryEnabled {
                     let record = TranscriptionRecord(
                         text: text,
@@ -87,9 +90,16 @@ internal extension ContentView {
 
     func finishTranscription(text: String, requestID: UUID) {
         isProcessing = false
+        soundManager.playCompletionSound()
+        // A paste can arrive after copying but before history finishes saving.
+        guard !transcriptWasPasted else {
+            finalText = nil
+            showSuccess = false
+            hideRecordingWindow()
+            return
+        }
         finalText = text
         showSuccess = true
-        soundManager.playCompletionSound()
         updateRecordingWindowSize()
         // A brief confirmation never takes keyboard focus or sends a paste event.
         NSApp.windows.first { $0.title == AppBrand.recordingWindowTitle }?.orderFrontRegardless()
@@ -101,6 +111,7 @@ internal extension ContentView {
             hideRecordingWindow()
             showSuccess = false
             finalText = nil
+            transcriptPasteboardChangeCount = nil
         }
     }
 
@@ -108,6 +119,8 @@ internal extension ContentView {
         completionTask?.cancel()
         completionTask = nil
         finalText = nil
+        transcriptPasteboardChangeCount = nil
+        transcriptWasPasted = false
         processingTask?.cancel()
         processingTask = nil
         activeTranscriptionID = nil

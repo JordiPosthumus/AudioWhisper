@@ -16,13 +16,16 @@ internal class KeyboardEventHandler {
     }
     
     private func setupGlobalKeyMonitoring() {
-        // The live indicator does not take focus. Only Escape acts globally;
-        // ordinary typing and Return in the user's app must not control dictation.
+        // Passive observation never consumes another app's paste. macOS supplies
+        // global key events only when its existing Accessibility access allows it.
         globalKeyMonitor = NSEvent.addGlobalMonitorForEvents(matching: .keyDown) { event in
-            guard event.keyCode == 53,
-                  let window = NSApp.windows.first(where: { $0.title == AppBrand.recordingWindowTitle }),
+            guard let window = NSApp.windows.first(where: { $0.title == AppBrand.recordingWindowTitle }),
                   window.isVisible else { return }
-            NotificationCenter.default.post(name: .escapeKeyPressed, object: nil)
+            if Self.isPasteShortcut(event) {
+                Self.notifyPasteShortcut()
+            } else if event.keyCode == 53 {
+                NotificationCenter.default.post(name: .escapeKeyPressed, object: nil)
+            }
         }
 
         localKeyMonitor = NSEvent.addLocalMonitorForEvents(matching: .keyDown) { event in
@@ -36,6 +39,11 @@ internal class KeyboardEventHandler {
     func handleKeyEvent(_ event: NSEvent, for window: NSWindow) -> NSEvent? {
         let key = event.charactersIgnoringModifiers?.lowercased() ?? ""
         let modifiers = event.modifierFlags
+
+        if Self.isPasteShortcut(event) {
+            Self.notifyPasteShortcut()
+            return event
+        }
         
         // Handle space key
         if key == " " && !modifiers.contains(.command) {
@@ -61,6 +69,17 @@ internal class KeyboardEventHandler {
         
         // Allow non-command keys to pass through
         return event
+    }
+
+    static func isPasteShortcut(_ event: NSEvent) -> Bool {
+        event.type == .keyDown && !event.isARepeat &&
+        event.modifierFlags.contains(.command) && !event.modifierFlags.contains(.control) &&
+        event.charactersIgnoringModifiers?.lowercased() == "v"
+    }
+
+    private static func notifyPasteShortcut() {
+        NotificationCenter.default.post(name: .transcriptPasteShortcut, object: nil,
+            userInfo: ["pasteboardChangeCount": NSPasteboard.general.changeCount])
     }
     
     deinit {

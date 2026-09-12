@@ -8,7 +8,7 @@ from unittest.mock import patch
 
 sys.path.insert(0, str(Path(__file__).resolve().parents[1] / "Sources"))
 from ml import rpc
-from ml.preview import PreviewSessions
+from ml.preview import PreviewSessions, merge_preview_tokens
 from types import SimpleNamespace
 
 
@@ -104,6 +104,37 @@ class PreviewRegressionTests(unittest.TestCase):
                 sessions.append("one", 0, payload)
         with self.assertRaisesRegex(ValueError, "out of order"):
             sessions.append("one", 2, "unused")
+
+
+class PreviewTextContinuityTests(unittest.TestCase):
+    @staticmethod
+    def token(identifier, start):
+        return SimpleNamespace(id=identifier, start=start, end=start + 0.3)
+
+    def test_overlap_retains_earlier_words_and_uses_new_draft(self):
+        old = [self.token(i, i) for i in range(6)]
+        new = [self.token(i, i + 0.05) for i in range(3, 8)]
+        merged = merge_preview_tokens(old, new, 2.8)
+        self.assertEqual([t.id for t in merged], list(range(8)))
+        self.assertIs(merged[3], new[0])
+
+    def test_timestamps_disambiguate_repeated_phrases(self):
+        old = [self.token(i % 2, i) for i in range(10)]
+        new = [self.token(0, 8.05), self.token(1, 9.05), self.token(2, 10)]
+        merged = merge_preview_tokens(old, new, 7.8)
+        self.assertEqual([t.id for t in merged], [i % 2 for i in range(10)] + [2])
+
+    def test_initial_window_can_rewrite_early_draft(self):
+        old = [self.token(1, 0)]
+        corrected = [self.token(2, 0), self.token(3, 1)]
+        self.assertEqual(merge_preview_tokens(old, corrected, 0), corrected)
+
+    def test_silence_keeps_already_spoken_words(self):
+        old = [self.token(1, 0)]
+        self.assertEqual(merge_preview_tokens(old, [], 0), old)
+        self.assertEqual(merge_preview_tokens(old, [], 8), old)
+        later = [self.token(2, 12)]
+        self.assertEqual(merge_preview_tokens(old, later, 8), old + later)
 
 
 if __name__ == "__main__":

@@ -100,6 +100,22 @@ final class KeyboardEventHandlerTests: XCTestCase {
         XCTAssertNotNil(result, "Command+C must reach native transcript selection")
     }
 
+    func testPasteNotifiesWithoutConsumingTheNativeShortcut() throws {
+        let expectation = expectation(forNotification: .transcriptPasteShortcut, object: nil)
+        let event = try XCTUnwrap(keyEvent(characters: "v", modifiers: [.command], keyCode: 9))
+        XCTAssertTrue(handler.handleKeyEvent(event, for: window) === event)
+        wait(for: [expectation], timeout: 1)
+    }
+
+    func testPasteAndMatchStyleIsRecognizedButOrdinaryVIsNot() throws {
+        let paste = try XCTUnwrap(keyEvent(characters: "V", modifiers: [.command, .shift, .option], keyCode: 9))
+        XCTAssertTrue(KeyboardEventHandler.isPasteShortcut(paste))
+        let typing = try XCTUnwrap(keyEvent(characters: "v", keyCode: 9))
+        XCTAssertFalse(KeyboardEventHandler.isPasteShortcut(typing))
+        let control = try XCTUnwrap(keyEvent(characters: "v", modifiers: [.command, .control], keyCode: 9))
+        XCTAssertFalse(KeyboardEventHandler.isPasteShortcut(control))
+    }
+
     func testNonCommandKeysPassThrough() {
         guard let event = keyEvent(characters: "a", keyCode: 0) else {
             XCTFail("Failed to create key event")

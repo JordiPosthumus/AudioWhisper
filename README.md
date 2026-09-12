@@ -9,12 +9,12 @@ A small, local macOS dictation app: watch your words appear while you speak, the
 ## Daily use
 
 - Start dictation with your existing hotkey or press-and-hold shortcut.
-- A centered floating recorder shows a voice-driven waveform, timer, and two lines of live text. Provisional words are highlighted while they settle.
+- A centered floating recorder places a tall KITT-style voice display and decorative status lamps beside the transcript. The text area grows as you speak; earlier words remain visible as the live draft advances.
 - Stop recording. The existing full-audio Parakeet pass produces the final text, copies it, and shows a brief animated confirmation that dismisses itself.
 - The completed text is copied to your clipboard. Press **⌘V** yourself wherever you want to paste. **Escape** cancels recording.
 - History, recording preferences, and launch at login live in a compact settings window.
 
-No Accessibility permission or paste setup is required. The app never sends paste keystrokes. Turn **Transcription Streaming** off in Preferences to use record-then-transcribe without live audio processing. The setting is saved and applies to the next recording.
+Recording, live text, and manual paste require no Accessibility setup. Auto-hide on the ⌘V shortcut also works when macOS allows the existing global keyboard listener; otherwise the brief timed dismissal remains. The app never sends paste keystrokes. Turn **Transcription Streaming** off in Preferences to use record-then-transcribe without live audio processing. The setting is saved and applies to the next recording.
 
 ## This fork
 

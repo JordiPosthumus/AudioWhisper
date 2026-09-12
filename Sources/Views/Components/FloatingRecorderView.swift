@@ -12,16 +12,21 @@ internal struct FloatingRecorderView: View {
     var preparingPreview = false
     var previewProblem: String?
     var finalText: String?
+    var availableSize = TranscriptPresentation.defaultAvailableSize
     let onPrimaryAction: () -> Void
     let onDismiss: () -> Void
 
     @Environment(\.accessibilityReduceMotion) private var reduceMotion
     @State private var completionGlow = false
+    @State private var cachedLayout = TranscriptPresentation.layout(text: "", live: true)
+    @State private var transcriptWordCount = 0
     private let cyan = Color(red: 0.30, green: 0.91, blue: 0.97)
     private let lilac = Color(red: 0.65, green: 0.53, blue: 1)
     private var recording: Bool { if case .recording = status { return true }; return false }
     private var processing: Bool { if case .processing = status { return true }; return false }
-    private var size: CGSize { TranscriptPresentation.size(finalText: finalText, live: streaming) }
+    private var transcript: String { finalText ?? (stableText + draftText) }
+    private var layout: TranscriptPresentation.Layout { cachedLayout }
+    private var size: CGSize { layout.size }
     private var hasLiveWords: Bool { !(stableText + draftText).trimmingCharacters(in: .whitespacesAndNewlines).isEmpty }
     private var levels: [Double] {
         if reduceMotion { return Array(repeating: AudioLevelDisplay.clamped(audioLevel), count: 48) }
@@ -31,16 +36,23 @@ internal struct FloatingRecorderView: View {
     var body: some View {
         VStack(alignment: .leading, spacing: 0) {
             header.padding(.horizontal, 19).padding(.top, 15)
-            if let finalText {
-                finalTranscript(finalText)
-            } else {
-                VoiceRibbon(levels: levels, active: recording)
-                    .frame(height: 51)
-                    .padding(.horizontal, 20)
-                    .padding(.top, 9)
-                    .padding(.bottom, streaming ? 9 : 12)
-                if streaming { liveTranscript }
+            HStack(alignment: .top, spacing: 20) {
+                KITTVoicePanel(levels: levels, active: recording, processing: processing,
+                    complete: finalText != nil, streaming: streaming,
+                    recordingStartedAt: recordingStartedAt,
+                    wordCount: transcriptWordCount)
+                    .frame(width: TranscriptPresentation.sideWidth, height: 200)
+                transcriptBody
+                    .frame(width: layout.textWidth, alignment: .topLeading)
             }
+            .frame(height: layout.bodyHeight, alignment: .top)
+            .padding(.horizontal, 20).padding(.top, 16)
+            Capsule()
+                .fill(LinearGradient(colors: [cyan.opacity(0.12), cyan, lilac.opacity(0.7)], startPoint: .leading, endPoint: .trailing))
+                .frame(height: 2)
+                .scaleEffect(x: completionGlow ? 1 : 0, y: 1, anchor: .leading)
+                .opacity(finalText == nil ? 0 : 1)
+                .padding(.horizontal, 20).padding(.top, 12).padding(.bottom, 16)
         }
         .frame(width: size.width, height: size.height, alignment: .top)
         .background {
@@ -57,8 +69,16 @@ internal struct FloatingRecorderView: View {
         }
         .clipShape(RoundedRectangle(cornerRadius: 25, style: .continuous))
         .environment(\.colorScheme, .dark)
-        .onChange(of: finalText) { _, text in animateCompletion(text != nil) }
-        .onAppear { if finalText != nil { animateCompletion(true) } }
+        .onChange(of: finalText) { _, text in refreshLayout(); animateCompletion(text != nil) }
+        .onChange(of: transcript) { _, _ in refreshLayout() }
+        .onChange(of: availableSize) { _, _ in refreshLayout() }
+        .onAppear { refreshLayout(); if finalText != nil { animateCompletion(true) } }
+    }
+
+    private func refreshLayout() {
+        // Text measurement is tied to transcript updates, never the 10 Hz meter.
+        cachedLayout = TranscriptPresentation.layout(text: transcript, live: finalText == nil, available: availableSize)
+        transcriptWordCount = transcript.split(whereSeparator: { $0.isWhitespace }).count
     }
 
     private func animateCompletion(_ complete: Bool) {
@@ -95,13 +115,7 @@ internal struct FloatingRecorderView: View {
                     .foregroundStyle(.white.opacity(0.43))
             }
             Spacer(minLength: 8)
-            if recording, let recordingStartedAt {
-                Text(recordingStartedAt, style: .timer)
-                    .font(.system(size: 11, weight: .medium, design: .monospaced))
-                    .foregroundStyle(cyan.opacity(0.8))
-                    .padding(.horizontal, 8).padding(.vertical, 5)
-                    .background(cyan.opacity(0.06), in: Capsule())
-            } else if processing { ProgressView().controlSize(.small).tint(cyan) }
+            if processing { ProgressView().controlSize(.small).tint(cyan) }
             Button(action: onDismiss) {
                 Image(systemName: "xmark").font(.system(size: 9, weight: .semibold))
                     .foregroundStyle(.white.opacity(0.35))
@@ -111,42 +125,35 @@ internal struct FloatingRecorderView: View {
         }
     }
 
-    private var liveTranscript: some View {
+    private var transcriptBody: some View {
         VStack(alignment: .leading, spacing: 10) {
-            Rectangle()
-                .fill(LinearGradient(colors: [.white.opacity(0.02), .white.opacity(0.13), .white.opacity(0.02)], startPoint: .leading, endPoint: .trailing))
-                .frame(height: 1)
-            if hasLiveWords {
-                let tail = TranscriptPresentation.liveTail(stable: stableText, draft: draftText)
-                (Text(tail.stable).foregroundColor(.white.opacity(0.92)) + Text(tail.draft).foregroundColor(cyan.opacity(0.8)))
-                    .font(.system(size: 14)).lineSpacing(3).lineLimit(2).truncationMode(.head)
+            if !layout.text.isEmpty {
+                transcriptText
+                    .font(.system(size: 15)).lineSpacing(4)
+                    .fixedSize(horizontal: false, vertical: true)
                     .frame(maxWidth: .infinity, alignment: .leading)
             } else {
-                Text(previewProblem ?? (preparingPreview ? "Preparing live words…" : processing ? "Your final text is on its way…" : "Your words will appear here…"))
-                    .font(.system(size: 12)).foregroundStyle(.white.opacity(0.36)).lineLimit(2)
+                Text(previewProblem ?? (preparingPreview ? "Preparing live words…" : processing ? "Your final text is on its way…" : streaming ? "Your words will appear here as you speak." : "Speak naturally. Your complete transcript will appear when you stop."))
+                    .font(.system(size: 15)).lineSpacing(4).foregroundStyle(.white.opacity(0.40))
+                    .fixedSize(horizontal: false, vertical: true)
             }
-            if previewProblem != nil, hasLiveWords {
+            if layout.isTruncated {
+                Text(finalText == nil ? "Showing the latest words · the final pass includes everything" : "Display limit reached · the complete text is on your clipboard")
+                    .font(.system(size: 11)).foregroundStyle(.white.opacity(0.45))
+            } else if previewProblem != nil, hasLiveWords, finalText == nil {
                 Text("Live preview paused · final transcription continues")
-                    .font(.system(size: 9)).foregroundStyle(.white.opacity(0.40))
+                    .font(.system(size: 11)).foregroundStyle(.white.opacity(0.45))
             }
         }
-        .padding(.horizontal, 20)
     }
 
-    private func finalTranscript(_ text: String) -> some View {
-        VStack(alignment: .leading, spacing: 10) {
-            ScrollView {
-                Text(text).font(.system(size: 15)).lineSpacing(3)
-                    .foregroundStyle(.white.opacity(0.94))
-                    .frame(maxWidth: .infinity, alignment: .leading)
-            }
-            .scrollIndicators(.hidden).frame(maxHeight: .infinity)
-            Capsule()
-                .fill(LinearGradient(colors: [cyan.opacity(0.12), cyan, lilac.opacity(0.7)], startPoint: .leading, endPoint: .trailing))
-                .frame(height: 2)
-                .scaleEffect(x: completionGlow ? 1 : 0, y: 1, anchor: .leading)
-        }
-        .padding(.horizontal, 20).padding(.top, 15).padding(.bottom, 17)
+    private var transcriptText: Text {
+        guard finalText == nil else { return Text(layout.text).foregroundColor(.white.opacity(0.94)) }
+        guard !layout.isTruncated else { return Text(layout.text).foregroundColor(cyan.opacity(0.88)) }
+        let earlierCount = stableText.drop(while: { $0.isWhitespace }).count
+        let boundary = min(earlierCount, layout.text.count)
+        return Text(String(layout.text.prefix(boundary))).foregroundColor(.white.opacity(0.92)) +
+            Text(String(layout.text.dropFirst(boundary))).foregroundColor(cyan.opacity(0.88))
     }
 }
 
@@ -175,11 +182,10 @@ internal struct VoiceRibbon: View {
     var body: some View {
         Canvas { context, size in
             let rows = 20
-            let columnWidth = 18.0
-            let gap = 7.0
+            let columnWidth = 14.0
+            let gap = 6.0
             let width = columnWidth * 3 + gap * 2
             let origin = (size.width - width) / 2
-            let pitch = (size.height - 2) / Double(rows)
             let red = Color(red: 1, green: 0.065, blue: 0.09)
             let voice = recentLevel(1)
             // Center follows the present syllable; the flanks use a short envelope
@@ -195,6 +201,9 @@ internal struct VoiceRibbon: View {
                              with: .color(red.opacity(0.10)))
             }
             for column in 0..<3 {
+                let columnHeight = size.height * (column == 1 ? 1 : 0.88)
+                let top = (size.height - columnHeight) / 2
+                let pitch = (columnHeight - 2) / Double(rows)
                 let strength = pow(envelopes[column], 1.1)
                 let litPairs = Int((strength * Double(rows / 2)).rounded())
                 let x = origin + Double(column) * (columnWidth + gap)
@@ -207,8 +216,8 @@ internal struct VoiceRibbon: View {
                 for row in 0..<rows {
                     let distance = abs(Double(row) - Double(rows - 1) / 2)
                     let lit = distance < Double(litPairs)
-                    let rect = CGRect(x: x, y: 1 + Double(row) * pitch,
-                                      width: columnWidth, height: max(1, pitch - 0.8))
+                    let rect = CGRect(x: x, y: top + 1 + Double(row) * pitch,
+                                      width: columnWidth, height: max(1, pitch - 1.4))
                     var light = context
                     light.opacity = lit ? 0.76 + strength * 0.24 : 0.045
                     light.fill(Path(roundedRect: rect, cornerRadius: 0.35), with: .linearGradient(lamp,
@@ -218,5 +227,64 @@ internal struct VoiceRibbon: View {
             }
         }
         .accessibilityElement(children: .ignore).accessibilityLabel("Microphone voice level")
+    }
+}
+
+/// Decorative status lamps occupy the classic voice-box positions; none are controls.
+private struct KITTVoicePanel: View {
+    let levels: [Double]
+    let active: Bool
+    let processing: Bool
+    let complete: Bool
+    let streaming: Bool
+    let recordingStartedAt: Date?
+    let wordCount: Int
+    private let amber = Color(red: 1, green: 0.66, blue: 0.27)
+    private let red = Color(red: 1, green: 0.13, blue: 0.15)
+
+    var body: some View {
+        VStack(spacing: 12) {
+            HStack(alignment: .center, spacing: 6) {
+                VStack(spacing: 12) {
+                    lamp("LOCAL", color: amber, lit: true)
+                    lamp("MIC", color: amber, lit: active)
+                    lamp("REC", color: red, lit: active)
+                    lamp("LIVE", color: red, lit: streaming && active)
+                }
+                VoiceRibbon(levels: levels, active: active).frame(width: 54, height: 148)
+                VStack(spacing: 12) {
+                    Group {
+                        if active, let recordingStartedAt {
+                            Text(recordingStartedAt, style: .timer).monospacedDigit()
+                        } else { Text("READY") }
+                    }
+                    .font(.system(size: 8, weight: .bold, design: .rounded))
+                    .foregroundStyle(Color.black.opacity(0.9))
+                    .frame(width: 39, height: 19)
+                    .background(amber.opacity(0.82), in: Capsule())
+                    .accessibilityLabel(active ? "Elapsed recording time" : "Ready")
+                    lamp("\(wordCount) W", color: amber, lit: wordCount > 0)
+                    lamp("FINAL", color: red, lit: processing)
+                    lamp("COPIED", color: red, lit: complete)
+                }
+            }
+            Text(complete ? "COPIED" : processing ? "FINAL PASS" : active ? "LISTENING" : "STANDBY")
+                .font(.system(size: 9, weight: .heavy, design: .rounded)).tracking(1.2)
+                .foregroundStyle(red.opacity(0.9))
+                .frame(width: 114, height: 20)
+                .background(red.opacity(0.10), in: RoundedRectangle(cornerRadius: 3))
+                .overlay(RoundedRectangle(cornerRadius: 3).stroke(red.opacity(0.22), lineWidth: 1))
+        }
+        .padding(.vertical, 10).padding(.horizontal, 8)
+        .background(Color.black.opacity(0.45), in: RoundedRectangle(cornerRadius: 12))
+        .overlay(RoundedRectangle(cornerRadius: 12).stroke(.white.opacity(0.06), lineWidth: 1))
+    }
+
+    private func lamp(_ text: String, color: Color, lit: Bool) -> some View {
+        Text(text).font(.system(size: 8, weight: .heavy, design: .rounded))
+            .foregroundStyle(lit ? Color.black.opacity(0.9) : color.opacity(0.40))
+            .frame(width: 39, height: 19)
+            .background(color.opacity(lit ? 0.82 : 0.07), in: Capsule())
+            .overlay(Capsule().stroke(color.opacity(lit ? 0.20 : 0.08), lineWidth: 0.5))
     }
 }

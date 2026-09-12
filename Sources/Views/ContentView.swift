@@ -16,6 +16,10 @@ internal struct ContentView: View {
     @State var errorMessage = ""
     @State var showSuccess = false
     @State var finalText: String?
+    @State var transcriptAvailableSize = TranscriptPresentation.defaultAvailableSize
+    @State var transcriptPasteboardChangeCount: Int?
+    @State var transcriptWasPasted = false
+    @State var pasteShortcutObserver: NSObjectProtocol?
     @State var completionTask: Task<Void, Never>?
     @State var isHovered = false
     @State var isHandlingSpaceKey = false
@@ -55,6 +59,7 @@ internal struct ContentView: View {
             preparingPreview: streamingPreview.isPreparing,
             previewProblem: streamingPreview.problem,
             finalText: finalText,
+            availableSize: transcriptAvailableSize,
             onPrimaryAction: {
                 if audioRecorder.isRecording { stopAndProcess() }
                 else if !isProcessing { startRecording() }
@@ -105,6 +110,13 @@ internal struct ContentView: View {
             updateRecordingWindowSize()
         }
         .onChange(of: streamingPreview.isEnabledForSession) { _, _ in updateRecordingWindowSize() }
+        .onChange(of: streamingPreview.stableText) { _, _ in updateRecordingWindowSize() }
+        .onChange(of: streamingPreview.draftText) { _, _ in updateRecordingWindowSize() }
+        .onReceive(NotificationCenter.default.publisher(for: NSWindow.didChangeScreenNotification)) { notification in
+            if let window = notification.object as? NSWindow, window.title == AppBrand.recordingWindowTitle {
+                updateRecordingWindowSize()
+            }
+        }
         .onChange(of: showError) { _, newValue in
             updateStatus()
             if newValue {

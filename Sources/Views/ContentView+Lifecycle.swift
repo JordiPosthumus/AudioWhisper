@@ -22,6 +22,12 @@ internal extension ContentView {
     }
     
     private func setupNotificationObservers() {
+        pasteShortcutObserver = NotificationCenter.default.addObserver(
+            forName: .transcriptPasteShortcut, object: nil, queue: .main
+        ) { notification in
+            guard let count = notification.userInfo?["pasteboardChangeCount"] as? Int else { return }
+            Task { @MainActor in dismissCompletedTranscriptAfterPaste(changeCount: count) }
+        }
         transcriptionProgressObserver = NotificationCenter.default.addObserver(
             forName: .transcriptionProgress,
             object: nil,
@@ -105,6 +111,7 @@ internal extension ContentView {
     }
     
     private func removeNotificationObservers() {
+        removeObserver(&pasteShortcutObserver)
         removeObserver(&transcriptionProgressObserver)
         removeObserver(&spaceKeyObserver)
         removeObserver(&escapeKeyObserver)

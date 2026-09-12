@@ -7,6 +7,8 @@ internal extension ContentView {
         completionTask?.cancel()
         completionTask = nil
         finalText = nil
+        transcriptPasteboardChangeCount = nil
+        transcriptWasPasted = false
         processingTask?.cancel()
         processingTask = nil
         activeTranscriptionID = nil
@@ -22,10 +24,27 @@ internal extension ContentView {
 
     func updateRecordingWindowSize() {
         guard let window = NSApp.windows.first(where: { $0.title == AppBrand.recordingWindowTitle }) else { return }
-        let size = TranscriptPresentation.size(finalText: finalText, live: streamingPreview.isEnabledForSession)
-        let screen = (window.screen ?? WindowController.recordingScreen())?.frame ?? window.frame
+        let display = window.screen ?? WindowController.recordingScreen()
+        let available = display?.visibleFrame.size ?? TranscriptPresentation.defaultAvailableSize
+        transcriptAvailableSize = available
+        let size = TranscriptPresentation.size(finalText: finalText, live: streamingPreview.isEnabledForSession,
+            liveText: streamingPreview.stableText + streamingPreview.draftText, available: available)
+        let screen = display?.frame ?? window.frame
         let frame = RecorderWindowGeometry.centered(size: size, on: screen)
-        window.setFrame(frame, display: true)
+        if window.frame != frame { window.setFrame(frame, display: true) }
+    }
+
+    func dismissCompletedTranscriptAfterPaste(changeCount: Int) {
+        guard !audioRecorder.isRecording, transcriptPasteboardChangeCount != nil,
+              transcriptPasteboardChangeCount == changeCount,
+              transcriptPasteboardChangeCount == NSPasteboard.general.changeCount else { return }
+        transcriptWasPasted = true
+        completionTask?.cancel()
+        completionTask = nil
+        hideRecordingWindow()
+        showSuccess = false
+        finalText = nil
+        transcriptPasteboardChangeCount = nil
     }
 
     func hideRecordingWindow() {
