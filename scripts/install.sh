@@ -42,7 +42,7 @@ cleanup() {
 trap cleanup EXIT
 archive="ScribeKitt-$version.zip"
 release="https://github.com/JordiPosthumus/ScribeKitt/releases/download/v$version"
-echo "Downloading ScribeKitt $version…"
+echo "Downloading ScribeKitt ${version}..."
 curl --fail --location --retry 3 --connect-timeout 20 "$release/$archive" -o "$download/$archive"
 curl --fail --silent --show-error --location --retry 3 "$release/SHA256SUMS" -o "$download/SHA256SUMS"
 expected="$(awk -v name="$archive" '$2 == name { print $1 }' "$download/SHA256SUMS")"
