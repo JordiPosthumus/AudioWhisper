@@ -3,6 +3,7 @@ import SwiftUI
 internal struct DashboardPreferencesView: View {
     @AppStorage("immediateRecording") private var immediateRecording = false
     @AppStorage(AppDefaults.Keys.transcriptionStreaming) private var transcriptionStreaming = true
+    @AppStorage(AppDefaults.Keys.addTrailingSpace) private var addTrailingSpace = true
     @AppStorage("autoBoostMicrophoneVolume") private var autoBoostMicrophoneVolume = false
     @AppStorage("playCompletionSound") private var playCompletionSound = true
     @AppStorage("transcriptionHistoryEnabled") private var transcriptionHistoryEnabled = false
@@ -41,6 +42,15 @@ internal struct DashboardPreferencesView: View {
                 }
 
                 LabeledContent("Paste", value: "Copied automatically; paste with ⌘V")
+
+                Toggle(isOn: $addTrailingSpace) {
+                    VStack(alignment: .leading, spacing: 2) {
+                        Text("Add Trailing Space")
+                        Text("Add a space after sentence-ending punctuation so your next dictation pastes separately.")
+                            .font(.caption)
+                            .foregroundStyle(.secondary)
+                    }
+                }
 
                 Toggle(isOn: $transcriptionStreaming) {
                     VStack(alignment: .leading, spacing: 2) {

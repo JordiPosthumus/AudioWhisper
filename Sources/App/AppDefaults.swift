@@ -19,6 +19,7 @@ internal enum AppDefaults {
         static let enableSmartPaste = "enableSmartPaste"
         static let immediateRecording = "immediateRecording"
         static let transcriptionStreaming = "transcriptionStreaming"
+        static let addTrailingSpace = "addTrailingSpace"
         static let globalHotkey = "globalHotkey"
 
         static let pressAndHoldEnabled = "pressAndHoldEnabled"
@@ -48,6 +49,7 @@ internal enum AppDefaults {
             Keys.enableSmartPaste: false,
             Keys.immediateRecording: false,
             Keys.transcriptionStreaming: true,
+            Keys.addTrailingSpace: true,
             Keys.globalHotkey: "⌘⇧Space",
 
             Keys.pressAndHoldEnabled: PressAndHoldConfiguration.defaults.enabled,

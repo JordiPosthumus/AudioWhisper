@@ -15,7 +15,7 @@ Local macOS dictation with a KITT-inspired voice display: watch your words appea
 
 - Start dictation with your existing hotkey or press-and-hold shortcut.
 - A centered floating recorder places a tall KITT-style voice display and decorative status lamps beside the transcript. The text area grows as you speak; earlier words remain visible as the live draft advances.
-- Stop recording. The existing full-audio Parakeet pass produces the final text, copies it, and shows a brief animated confirmation that dismisses itself.
+- Stop recording. The existing full-audio Parakeet pass produces the final text, copies it, and shows a brief animated confirmation that dismisses itself. **Add Trailing Space** is on by default: copied text ending in a full stop, question mark, or exclamation mark gets a trailing space so the next dictation stays separated. You can switch this off in Preferences.
 - The completed text is copied to your clipboard. Press **⌘V** yourself wherever you want to paste. **Escape** cancels recording.
 - History, recording preferences, and launch at login live in a compact settings window. Launch at login is opt-in for new users and follows the actual macOS setting.
 
@@ -46,15 +46,15 @@ When upgrading from AudioWhisper or SpeedyWhisper, quit the previous app and rep
 
 ## Install the test build
 
-[ScribeKitt 210.15](https://github.com/JordiPosthumus/ScribeKitt/releases/tag/v210.15) is available as a prebuilt test app. No Xcode or Homebrew is needed. Quit any running ScribeKitt/AudioWhisper app, then paste this into Terminal:
+[ScribeKitt 210.16](https://github.com/JordiPosthumus/ScribeKitt/releases/tag/v210.16) is available as a prebuilt test app. No Xcode or Homebrew is needed. Quit any running ScribeKitt/AudioWhisper app, then paste this into Terminal:
 
 ```bash
 (
   set -e
   installer=$(mktemp -t scribekitt-install)
   trap 'rm -f "$installer"' EXIT
-  curl -fsSL https://raw.githubusercontent.com/JordiPosthumus/ScribeKitt/v210.15/scripts/install.sh -o "$installer"
-  /bin/bash "$installer" 210.15
+  curl -fsSL https://raw.githubusercontent.com/JordiPosthumus/ScribeKitt/v210.16/scripts/install.sh -o "$installer"
+  /bin/bash "$installer" 210.16
 )
 ```
 
