@@ -4,6 +4,8 @@ import SwiftUI
 internal struct LocalSetupView: View {
     @ObservedObject var setup: LocalSetupManager
     var loginItems: LoginItemManager = .shared
+    @ObservedObject var permissions: SetupPermissions = .shared
+    var configuration: PressAndHoldConfiguration = PressAndHoldSettings.configuration()
     var onContinue: () -> Void
     var onResize: @MainActor (CGSize) -> Void = { _ in }
 
@@ -12,8 +14,8 @@ internal struct LocalSetupView: View {
     var body: some View {
         VStack(alignment: .leading, spacing: 22) {
             HStack(alignment: .center, spacing: 14) {
-                Image(systemName: setup.isReady ? "checkmark.circle.fill" : "waveform")
-                    .font(.system(size: 34, weight: .medium)).foregroundStyle(cyan)
+                Image("ScribeKittLogo", bundle: .module)
+                    .resizable().scaledToFit().frame(width: 52, height: 52)
                 VStack(alignment: .leading, spacing: 5) {
                     Text("ScribeKitt").font(.system(size: 29, weight: .bold))
                     Text("YOUR VOICE. YOUR MAC. YOUR WORDS.")
@@ -21,16 +23,17 @@ internal struct LocalSetupView: View {
                 }
             }
 
-            Text(setup.isReady ? "You’re ready to dictate." : "A little setup. Then it’s all local.")
+            Text(setup.isReady ? (permissions.needsSetup(configuration: configuration) ? "Enable your recording key." : "You’re ready to dictate.") : "A little setup. Then it’s all local.")
                 .font(.system(size: 23, weight: .semibold))
 
             Text(setup.isReady
-                 ? "Use the microphone menu or your recording shortcut. Speak, stop, then paste with ⌘V. Microphone access is requested when you first record."
+                 ? recordingInstructions
                  : "ScribeKitt downloads its speech model and runtime once. Allow 6 GB of free space and internet access for setup. English dictation runs on your Mac afterward.")
                 .font(.system(size: 14)).foregroundStyle(.secondary)
                 .lineSpacing(4).fixedSize(horizontal: false, vertical: true)
 
-            VStack(alignment: .leading, spacing: 17) {
+            if !setup.isReady {
+              VStack(alignment: .leading, spacing: 17) {
                 ForEach(LocalSetupManager.Stage.allCases, id: \.rawValue) { stage in
                     HStack(spacing: 13) {
                         stageIcon(stage).frame(width: 22, height: 22)
@@ -41,8 +44,14 @@ internal struct LocalSetupView: View {
             }
             .padding(20)
             .background(.white.opacity(0.045), in: RoundedRectangle(cornerRadius: 16))
+            }
 
             if setup.isReady {
+                SetupPermissionsView(permissions: permissions, configuration: configuration)
+                    .padding(16)
+                    .background(.white.opacity(0.045), in: RoundedRectangle(cornerRadius: 16))
+                Text("New-install defaults: live text, microphone boost, trailing spaces, and local history kept until you delete it. You can change these in Settings.")
+                    .font(.caption).foregroundStyle(.secondary)
                 LoginItemControlView(manager: loginItems)
                     .toggleStyle(.switch)
                     .font(.system(size: 14))
@@ -77,7 +86,7 @@ internal struct LocalSetupView: View {
                     .background(cyan.opacity(setup.isPreparing ? 0.35 : 1), in: RoundedRectangle(cornerRadius: 11))
             }
             .buttonStyle(.plain).foregroundStyle(.black)
-            .disabled(setup.isPreparing || setup.state == .unsupported)
+            .disabled(setup.isPreparing || setup.state == .unsupported || (setup.isReady && !permissions.microphoneAllowed))
             .keyboardShortcut(.defaultAction)
         }
         .padding(32).frame(width: 520)
@@ -89,10 +98,22 @@ internal struct LocalSetupView: View {
     }
 
     private var buttonTitle: String {
-        if setup.isReady { return "Start dictating" }
+        if setup.isReady {
+            if !permissions.microphoneAllowed { return "Allow microphone to continue" }
+            if configuration.enabled && !permissions.keyboardAllowed { return "Continue with microphone menu" }
+            return "Start dictating"
+        }
         if setup.isPreparing { return "Preparing ScribeKitt…" }
         if case .failed = setup.state { return "Try again" }
         return "Prepare ScribeKitt"
+    }
+
+    private var recordingInstructions: String {
+        guard configuration.enabled else { return "Start recording from the microphone menu, speak, stop, then paste with ⌘V." }
+        if configuration.mode == .hold {
+            return "Hold \(configuration.key.displayName) while speaking. Release it to finish, then paste with ⌘V. Allow the permissions below to use the key in other apps."
+        }
+        return "Press \(configuration.key.displayName) to control dictation, then paste with ⌘V. Allow the permissions below to use the key in other apps."
     }
 
     @ViewBuilder private func stageIcon(_ stage: LocalSetupManager.Stage) -> some View {

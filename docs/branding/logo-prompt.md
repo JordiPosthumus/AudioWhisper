@@ -1,7 +1,5 @@
-# ScribeKitt icon
+# ScribeKitt voice-display icon
 
-Generated with the built-in image-generation tool. The icon was originally generated for the SpeedyWhisper name and retained for ScribeKitt. The full-resolution selected output is `ScribeKittIcon.png`; the app icon sizes are derived with macOS `sips` and `iconutil`.
+The app icon uses a graphite tile and three red segmented columns inspired by KITT’s voice modulator. It replaces the earlier blue S mark. Generated with the built-in image-generation tool; the selected full-resolution PNG is `ScribeKittIcon.png`. Native icon sizes and the setup logo are derived using macOS `sips` and `iconutil`.
 
-Prompt:
-
-> Use case: logo-brand. Create one polished macOS app icon for SpeedyWhisper, a fast, small local voice dictation app. Deliver a single centered icon, not a presentation sheet or mockup. A distinctive simple sound-wave mark that subtly suggests both a flowing letter S and forward motion, on a softly rounded square app-icon tile. The mark should remain recognizable at 32px and feel calm, precise, and friendly. Refined blue/teal light against a deep neutral tile, restrained depth and a very subtle highlight, crisp clean edges. No words, letters as typography, microphone clip art, decorative tiny details, border, watermark, or surrounding objects. Transparent outside the rounded square, with generous consistent macOS icon padding. Square high-resolution raster asset suitable for use as the actual application icon.
+Prompt summary: A front-facing rounded-square near-black graphite macOS app tile with transparency outside. Exactly three vertical red LED columns, with a taller middle column and equal shorter side columns. Restrained red glow, subtle inset panel and graphite bevel. Bold simple silhouette, no text, no car, no microphone or horizontal scanner bar. Suitable for small app-icon sizes.

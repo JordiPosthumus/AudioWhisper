@@ -4,7 +4,7 @@ import HotKey
 import AppKit
 
 internal struct DashboardRecordingView: View {
-    @AppStorage("globalHotkey") private var globalHotkey = "⌘⇧Space"
+    @AppStorage("globalHotkey") private var globalHotkey = AppDefaults.defaultGlobalHotkey
     @AppStorage("pressAndHoldEnabled") private var pressAndHoldEnabled = PressAndHoldConfiguration.defaults.enabled
     @AppStorage("pressAndHoldKeyIdentifier") private var pressAndHoldKeyIdentifier = PressAndHoldConfiguration.defaults.key.rawValue
     @AppStorage("pressAndHoldMode") private var pressAndHoldModeRaw = PressAndHoldConfiguration.defaults.mode.rawValue
@@ -55,7 +55,7 @@ internal struct DashboardRecordingView: View {
             } header: {
                 Text("Global Hotkey")
             } footer: {
-                Text("Starts and stops recording system-wide.")
+                Text("For a modifier key on its own, such as right ⌘, use the Press & Hold section below.")
             }
 
             Section {
@@ -95,7 +95,11 @@ internal struct DashboardRecordingView: View {
             } header: {
                 Text("Press & Hold")
             } footer: {
-                Text("Requires Accessibility permission to work in other apps.")
+                VStack(alignment: .leading, spacing: 6) {
+                    Text("Requires Accessibility permission to work in other apps.")
+                    Text(SetupPermissions.restartNote)
+                    Button("Setup & Permissions…") { LocalSetupWindowController.shared.show(onContinue: {}) }
+                }
             }
         }
         .formStyle(.grouped)
@@ -124,4 +128,3 @@ internal struct DashboardRecordingView: View {
     DashboardRecordingView()
         .frame(width: 900, height: 700)
 }
-

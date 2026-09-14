@@ -5,10 +5,12 @@ import AppKit
 final class PressAndHoldKeyMonitorTests: XCTestCase {
     private var addedEvents: [(NSEvent.EventTypeMask, (NSEvent) -> Void)] = []
     private var removedEvents: [Any] = []
+    private var localEvents: [(NSEvent) -> NSEvent?] = []
 
     override func tearDown() {
         addedEvents.removeAll()
         removedEvents.removeAll()
+        localEvents.removeAll()
         super.tearDown()
     }
 
@@ -33,6 +35,10 @@ final class PressAndHoldKeyMonitorTests: XCTestCase {
             keyDownHandler: keyDownHandler,
             keyUpHandler: keyUpHandler,
             addGlobalMonitor: addMonitor,
+            addLocalMonitor: { [weak self] _, handler in
+                self?.localEvents.append(handler)
+                return "local"
+            },
             removeMonitor: removeMonitor
         )
     }
@@ -47,6 +53,7 @@ final class PressAndHoldKeyMonitorTests: XCTestCase {
 
         XCTAssertEqual(addedEvents.count, 1)
         XCTAssertEqual(addedEvents.first?.0, .flagsChanged)
+        XCTAssertEqual(localEvents.count, 1)
     }
 
     // MARK: - Transitions
@@ -110,6 +117,31 @@ final class PressAndHoldKeyMonitorTests: XCTestCase {
         monitor.start()
         monitor.stop()
 
-        XCTAssertEqual(removedEvents.count, 1)
+        XCTAssertEqual(removedEvents.count, 2)
+    }
+
+    func testPressInOtherAppAndReleaseInScribeKittPreservesEvent() throws {
+        let down = expectation(description: "global press")
+        let up = expectation(description: "local release")
+        let monitor = makeMonitor(configuration: .defaults,
+                                  keyDownHandler: { down.fulfill() }, keyUpHandler: { up.fulfill() })
+        monitor.start()
+        let press = try XCTUnwrap(NSEvent.keyEvent(with: .flagsChanged, location: .zero, modifierFlags: .command,
+            timestamp: 0, windowNumber: 0, context: nil, characters: "", charactersIgnoringModifiers: "", isARepeat: false, keyCode: 54))
+        let release = try XCTUnwrap(NSEvent.keyEvent(with: .flagsChanged, location: .zero, modifierFlags: [],
+            timestamp: 1, windowNumber: 0, context: nil, characters: "", charactersIgnoringModifiers: "", isARepeat: false, keyCode: 54))
+        addedEvents[0].1(press)
+        XCTAssertTrue(localEvents[0](release) === release)
+        wait(for: [down, up], timeout: 1)
+    }
+
+    func testModifierStateUsesFlagsAndDistinguishesLeftAndRight() {
+        XCTAssertTrue(PressAndHoldKeyMonitor.isModifierPressed(.rightCommand, flags: .command))
+        XCTAssertFalse(PressAndHoldKeyMonitor.isModifierPressed(.rightCommand, flags: []))
+        let leftOnly = NSEvent.ModifierFlags(rawValue: NSEvent.ModifierFlags.command.rawValue | 0x08)
+        XCTAssertFalse(PressAndHoldKeyMonitor.isModifierPressed(.rightCommand, flags: leftOnly))
+        XCTAssertTrue(PressAndHoldKeyMonitor.isModifierPressed(.leftCommand, flags: leftOnly))
+        let both = NSEvent.ModifierFlags(rawValue: NSEvent.ModifierFlags.command.rawValue | 0x18)
+        XCTAssertTrue(PressAndHoldKeyMonitor.isModifierPressed(.rightCommand, flags: both))
     }
 }

@@ -1,10 +1,10 @@
 # First-launch setup and release validation
 
-ScribeKitt 210.14 adds a single first-run action for new Apple Silicon installations. It prepares the existing Python 3.11 runtime manifest, downloads the two Parakeet v2 files (`config.json` and `model.safetensors`), and verifies offline decoding with a one-second synthetic silent fixture. The fixture is deleted afterward and never enters the clipboard or history. A working existing model/runtime bypasses this flow without dependency syncing or model loading at app startup.
+ScribeKitt provides a single first-run action for new Apple Silicon installations. It prepares the existing Python 3.11 runtime manifest, downloads the two Parakeet v2 files (`config.json` and `model.safetensors`), and verifies offline decoding with a one-second synthetic silent fixture. The fixture is deleted afterward and never enters the clipboard or history. A working existing model/runtime skips preparation without dependency syncing or model loading at app startup. The permission guide still appears if microphone or recording-key access is missing.
 
 The setup action alone can download model files. Normal transcription resolves the existing snapshot explicitly with `local_files_only=True` and passes its directory to Parakeet with the same default arguments as before. This fixes an import-time offline-flag issue in the Hub library that previously allowed an online metadata lookup. The in-process model cache and final generation function remain intact. Existing local-directory model loading remains supported.
 
-Recording and file-transcription entry points direct new users to setup until it succeeds. Microphone permission is deferred until the user proceeds from setup to recording. Errors are shown with retry and details. Duplicate button presses cannot create concurrent setup jobs. Completed downloads are reused on retry. No recording is uploaded, and no model chooser or inference-tuning settings are added.
+Recording and file-transcription entry points direct new users to setup until it succeeds. After preparation, setup offers explicit buttons for microphone and Accessibility access. The latter enables the default Right Command recording key. Errors are shown with retry and details. Duplicate button presses cannot create concurrent setup jobs. Completed downloads are reused on retry. No recording is uploaded, and no model chooser or inference-tuning settings are added.
 
 ## Checks on the development Mac
 
@@ -31,7 +31,7 @@ Both the fresh runtime and the established runtime passed 57 preview updates acr
 
 These are local measurements on the development Mac, not latency guarantees for other hardware. The graphics path is unchanged by the rebrand; its existing full-panel benchmark is documented in [STREAMING.md](STREAMING.md).
 
-Final validation: 307 Swift tests passed and two opt-in/snapshot checks were skipped in the full suite; the clean-download integration passed separately. All 19 Python protocol, setup and loader checks passed. The universal release build passed. Existing final-inference, preview-decoding, runtime-manifest and runtime-bootstrap source files remain byte-for-byte unchanged; the loader change is limited to locating the cached snapshot.
+Version 210.17 validation: 315 Swift tests passed and two opt-in/snapshot checks were skipped in the full suite; the clean-download integration passed separately. All 19 Python protocol, setup and loader checks passed. The universal release build passed. Existing final-inference, preview-decoding, runtime-manifest and runtime-bootstrap source files remain byte-for-byte unchanged; the loader change is limited to locating the cached snapshot.
 
 ## Stable signed resources
 
@@ -46,3 +46,13 @@ The final suite also exercises a healthy legacy history migration (including WAL
 Version 210.15 offers an optional Start at Login switch after setup completes, also available in Preferences. A new installation stays off until the user opts in. Opening or upgrading the app does not register or unregister a login item, so existing macOS choices survive even if the old preference was never explicitly saved. Both views read the actual SMAppService status and refresh when the app or window becomes active. Pending approval remains visibly off with Open Login Settings and Cancel Request actions. Errors keep the effective toggle position and do not save an unconfirmed preference. Tests cover opt-in, existing registrations, changes in macOS, failure, approval, cancellation, and overlapping clicks.
 
 ![Optional launch at login after setup](images/setup-ready.png)
+
+## Default recording setup
+
+New installations hold Right Command to record and release it to finish. The alternate shortcut is Option-Control-Q. Live transcription, microphone boost, completion sound, trailing space, and history are enabled; history is retained until deleted. Explicit saved preferences survive upgrades. Start at Login remains optional.
+
+The permission guide explains how to enable ScribeKitt in System Settings → Privacy & Security → Accessibility. It includes this recovery note: “If the recording key still doesn’t respond after granting access, quit ScribeKitt from the microphone menu and reopen it.” Setup & Permissions is always available from the microphone menu and Recording settings. Users with microphone access can explicitly continue with the microphone menu while keyboard access is unavailable.
+
+Modifier monitoring now handles events while ScribeKitt is focused as well as events from other apps, and reads the actual left/right modifier state. Tests cover local release after global press, side-specific state, fresh defaults, preserved choices, and permission actions. The app icon and setup logo use the red three-column voice-display design.
+
+![Recording-key permission guide](images/setup-permissions.png)

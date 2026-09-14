@@ -8,7 +8,7 @@ The recorder appears at the center of the screen containing the pointer, without
 
 The transcript appears on the right. Earlier words remain as the eight-second acoustic window advances. The panel starts at 640 × 300 points and expands up to 1000 × 840, constrained by the current screen's usable area. Normal-length transcripts display in full without scrolling. Beyond the screen-sized limit, a labelled excerpt shows the latest live words or the beginning of the final transcript; the clipboard and history keep the complete final text.
 
-Stopping runs the established full-recording Parakeet pass, copies its text, and gives a glow/check confirmation. Short phrases remain for 0.85 seconds; longer text receives more scan time, up to six seconds. Pressing ⌘V dismisses the confirmation early when the existing passive keyboard listener receives the shortcut. Paste itself is never intercepted or generated. macOS requires Accessibility access to deliver other-app keyboard events; no new permission prompt is introduced. Menu/context-menu paste is not detected, and timed dismissal remains available.
+Stopping runs the established full-recording Parakeet pass, copies its text, and gives a glow/check confirmation. Short phrases remain for 0.85 seconds; longer text receives more scan time, up to six seconds. Pressing ⌘V dismisses the confirmation early when the existing passive keyboard listener receives the shortcut. Paste itself is never intercepted or generated. macOS requires Accessibility access to deliver other-app keyboard events; setup offers an explicit button to grant this permission. Menu/context-menu paste is not detected, and timed dismissal remains available.
 
 Transcription Streaming defaults on. Its saved Preferences toggle applies to the next recording. Turning it off starts no preview microphone tap or preview model requests; the existing final pass remains available in both modes.
 
@@ -32,7 +32,7 @@ No synthetic paste events are used. See `docs/ACCEPTANCE.md` for the live workfl
 
 ## One-time setup
 
-A new installation offers one Prepare ScribeKitt action for the local Python runtime and Parakeet v2 model. Existing installations bypass setup; no model selector or tuning controls are added. Recording shortcuts open setup until verification succeeds. Normal model loading resolves cached files explicitly offline and retains the same decoder defaults and model cache. See [first-launch validation](docs/FIRST-LAUNCH.md).
+A new installation offers one Prepare ScribeKitt action for the local Python runtime and Parakeet v2 model. Existing installations reuse their prepared runtime and model; the permission guide appears if microphone or recording-key access is missing. Recording shortcuts open setup until verification succeeds. Normal model loading resolves cached files explicitly offline and retains the same decoder defaults and model cache. New installs hold Right Command to record and release it to finish. Setup explains microphone and Accessibility access and advises quitting and reopening ScribeKitt if the key still does not respond after granting access. See [first-launch validation](docs/FIRST-LAUNCH.md).
 
 ## Dedicated history storage
 

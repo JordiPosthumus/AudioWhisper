@@ -13,13 +13,13 @@ Local macOS dictation with a KITT-inspired voice display: watch your words appea
 
 ## Daily use
 
-- Start dictation with your existing hotkey or press-and-hold shortcut.
+- **Hold the right ⌘ Command key to record; release it to finish.** This is the default on a new installation. The key and behavior can be changed in Settings → Recording.
 - A centered floating recorder places a tall KITT-style voice display and decorative status lamps beside the transcript. The text area grows as you speak; earlier words remain visible as the live draft advances.
 - Stop recording. The existing full-audio Parakeet pass produces the final text, copies it, and shows a brief animated confirmation that dismisses itself. **Add Trailing Space** is on by default: copied text ending in a full stop, question mark, or exclamation mark gets a trailing space so the next dictation stays separated. You can switch this off in Preferences.
 - The completed text is copied to your clipboard. Press **⌘V** yourself wherever you want to paste. **Escape** cancels recording.
-- History, recording preferences, and launch at login live in a compact settings window. Launch at login is opt-in for new users and follows the actual macOS setting.
+- New installations enable live text, microphone boost, completion sounds, and local history kept until you delete it. History, recording preferences, and launch at login live in a compact settings window. Launch at login is opt-in for new users and follows the actual macOS setting.
 
-Recording, live text, and manual paste require no Accessibility setup. Auto-hide on the ⌘V shortcut also works when macOS allows the existing global keyboard listener; otherwise the brief timed dismissal remains. The app never sends paste keystrokes. Turn **Transcription Streaming** off in Preferences to use record-then-transcribe without live audio processing. The setting is saved and applies to the next recording.
+The default right-⌘ recording key requires **Accessibility** permission; setup guides you through it. The microphone menu remains available without that keyboard permission. The app never sends paste keystrokes. If the key still does not respond after granting permission, **quit ScribeKitt from its menu-bar menu and reopen it**. Turn **Transcription Streaming** off in Preferences to use record-then-transcribe without live audio processing. The setting is saved and applies to the next recording.
 
 ## First launch
 
@@ -27,9 +27,11 @@ ScribeKitt requires an **Apple Silicon Mac (M1 or newer)** and macOS 14 or later
 
 1. Move `ScribeKitt.app` to Applications and open it.
 2. Choose **Prepare ScribeKitt**. Setup prepares Python, downloads the roughly 2.5 GB Parakeet v2 model, and checks offline loading. Allow 6 GB of free space and an internet connection for setup.
-3. Choose **Start dictating**, grant microphone access when prompted, and try a short sentence. Stop, then paste with **⌘V**.
+3. Setup shows **Allow Microphone** and **Allow in Settings** for the recording key. In macOS **Privacy & Security → Accessibility**, enable ScribeKitt. If it is missing, use **+** to add the installed app from Applications.
+4. Hold **right ⌘**, speak, release, then paste with **⌘V**. If the key does not respond after granting access, quit ScribeKitt and reopen it.
+5. Revisit **Setup & Permissions…** from the microphone menu whenever needed. Start at Login remains an optional setup choice.
 
-Existing installations with the model and runtime already present skip setup. If a download is interrupted, reopen the app and choose **Prepare ScribeKitt** to retry; completed cached files are reused. Normal model loading and transcription use the local snapshot without online metadata requests.
+Existing installations reuse their model and runtime. If a required microphone or recording-key permission is missing, the permission guide still appears. If a download is interrupted, reopen the app and choose **Prepare ScribeKitt** to retry; completed cached files are reused. Normal model loading and transcription use the local snapshot without online metadata requests.
 
 <details>
 <summary>Preview the first-run setup</summary>
@@ -46,19 +48,19 @@ When upgrading from AudioWhisper or SpeedyWhisper, quit the previous app and rep
 
 ## Install the test build
 
-[ScribeKitt 210.16](https://github.com/JordiPosthumus/ScribeKitt/releases/tag/v210.16) is available as a prebuilt test app. No Xcode or Homebrew is needed. Quit any running ScribeKitt/AudioWhisper app, then paste this into Terminal:
+[ScribeKitt 210.17](https://github.com/JordiPosthumus/ScribeKitt/releases/tag/v210.17) is available as a prebuilt test app. No Xcode or Homebrew is needed. Quit any running ScribeKitt/AudioWhisper app, then paste this into Terminal:
 
 ```bash
 (
   set -e
   installer=$(mktemp -t scribekitt-install)
   trap 'rm -f "$installer"' EXIT
-  curl -fsSL https://raw.githubusercontent.com/JordiPosthumus/ScribeKitt/v210.16/scripts/install.sh -o "$installer"
-  /bin/bash "$installer" 210.16
+  curl -fsSL https://raw.githubusercontent.com/JordiPosthumus/ScribeKitt/v210.17/scripts/install.sh -o "$installer"
+  /bin/bash "$installer" 210.17
 )
 ```
 
-The installer verifies the archive checksum and app signature, backs up an existing ScribeKitt app, installs it, and opens setup. It preserves preferences, history, and model files. Start at Login is optional and initially off for new users. The test build is locally signed and has not been Apple-notarized; macOS may require approval in System Settings → Privacy & Security.
+The installer verifies the archive checksum and app signature, backs up an existing ScribeKitt app, installs it, and opens setup. It preserves existing preferences, history, and model files. New defaults apply only where you have not saved a different choice. Start at Login is optional and initially off for new users. The test build is locally signed and has not been Apple-notarized; macOS may require approval in System Settings → Privacy & Security.
 
 Updates are manual for now. Pushing source changes to GitHub does not update an installed app.
 

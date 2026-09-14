@@ -46,8 +46,12 @@ if [ -d "Sources/Assets.xcassets/AppIcon.appiconset" ]; then
   cp "$ICONSET_DIR"/*.png Sources/Assets.xcassets/AppIcon.appiconset/
 fi
 
+# Keep the setup window's brand mark in sync with the app icon.
+if [ -d "Sources/Assets.xcassets/ScribeKittLogo.imageset" ]; then
+  cp "$ICONSET_DIR/icon_128x128@2x.png" Sources/Assets.xcassets/ScribeKittLogo.imageset/logo.png
+fi
+
 # Don't clean up iconset - build.sh needs it
 # rm -rf "$ICONSET_DIR"
 
 echo "Done!"
-

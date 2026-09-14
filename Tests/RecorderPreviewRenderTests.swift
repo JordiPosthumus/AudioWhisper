@@ -12,6 +12,7 @@ final class RecorderPreviewRenderTests: XCTestCase {
         }
         let directory = URL(fileURLWithPath: destination, isDirectory: true)
         try FileManager.default.createDirectory(at: directory, withIntermediateDirectories: true)
+        let permissions = SetupPermissions(readMicrophone: { .authorized }, readKeyboard: { true }, requestMicrophone: { true }, openKeyboard: {}, openMicrophone: {})
         let waiting = LocalSetupManager(supported: true, existingInstallation: { false })
         let ready = LocalSetupManager(supported: true, existingInstallation: { true })
         let failed = LocalSetupManager(supported: true, existingInstallation: { false },
@@ -19,16 +20,21 @@ final class RecorderPreviewRenderTests: XCTestCase {
         await failed.prepare()
         for (name, setup) in [("setup", waiting), ("setup-ready", ready), ("setup-error", failed)] {
             let loginItems = LoginItemManager(readStatus: { .notRegistered }, register: {}, unregister: {}, openSettings: {})
-            let view = LocalSetupView(setup: setup, loginItems: loginItems, onContinue: {})
+            let view = LocalSetupView(setup: setup, loginItems: loginItems, permissions: permissions, configuration: .defaults, onContinue: {})
             let host = NSHostingView(rootView: view)
             try render(view, to: directory.appendingPathComponent(name + ".png"), size: host.fittingSize)
         }
+        let missingPermissions = SetupPermissions(readMicrophone: { .notDetermined }, readKeyboard: { false }, requestMicrophone: { false }, openKeyboard: {}, openMicrophone: {})
+        let freshLogin = LoginItemManager(readStatus: { .notRegistered }, register: {}, unregister: {}, openSettings: {})
+        let permissionView = LocalSetupView(setup: ready, loginItems: freshLogin, permissions: missingPermissions, configuration: .defaults, onContinue: {})
+        let permissionHost = NSHostingView(rootView: permissionView)
+        try render(permissionView, to: directory.appendingPathComponent("setup-permissions.png"), size: permissionHost.fittingSize)
         let approval = LoginItemManager(readStatus: { .requiresApproval }, register: {}, unregister: {}, openSettings: {})
         let failure = LoginItemManager(readStatus: { .enabled }, register: {},
             unregister: { throw CocoaError(.fileWriteNoPermission) }, openSettings: {})
         await failure.setEnabled(false)
         for (name, loginItems) in [("setup-login-approval", approval), ("setup-login-error", failure)] {
-            let view = LocalSetupView(setup: ready, loginItems: loginItems, onContinue: {})
+            let view = LocalSetupView(setup: ready, loginItems: loginItems, permissions: permissions, configuration: .defaults, onContinue: {})
             let host = NSHostingView(rootView: view)
             try render(view, to: directory.appendingPathComponent(name + ".png"), size: host.fittingSize)
         }

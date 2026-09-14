@@ -109,13 +109,13 @@ internal final class DataManager: DataManagerProtocol {
     }
     
     var isHistoryEnabled: Bool {
-        return defaults.bool(forKey: "transcriptionHistoryEnabled")
+        return defaults.object(forKey: "transcriptionHistoryEnabled") as? Bool ?? true
     }
     
     var retentionPeriod: RetentionPeriod {
         get {
-            let rawValue = defaults.string(forKey: "transcriptionRetentionPeriod") ?? RetentionPeriod.oneMonth.rawValue
-            return RetentionPeriod(rawValue: rawValue) ?? .oneMonth
+            let rawValue = defaults.string(forKey: "transcriptionRetentionPeriod") ?? RetentionPeriod.forever.rawValue
+            return RetentionPeriod(rawValue: rawValue) ?? .forever
         }
         set {
             defaults.set(newValue.rawValue, forKey: "transcriptionRetentionPeriod")

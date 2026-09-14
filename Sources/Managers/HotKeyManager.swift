@@ -22,7 +22,7 @@ internal class HotKeyManager {
     }
     
     private func setupInitialHotKey() {
-        let savedHotkey = UserDefaults.standard.string(forKey: "globalHotkey") ?? "⌘⇧Space"
+        let savedHotkey = UserDefaults.standard.string(forKey: "globalHotkey") ?? AppDefaults.defaultGlobalHotkey
         setupHotKeyFromString(savedHotkey)
     }
     

@@ -4,16 +4,16 @@ internal struct DashboardPreferencesView: View {
     @AppStorage("immediateRecording") private var immediateRecording = false
     @AppStorage(AppDefaults.Keys.transcriptionStreaming) private var transcriptionStreaming = true
     @AppStorage(AppDefaults.Keys.addTrailingSpace) private var addTrailingSpace = true
-    @AppStorage("autoBoostMicrophoneVolume") private var autoBoostMicrophoneVolume = false
+    @AppStorage("autoBoostMicrophoneVolume") private var autoBoostMicrophoneVolume = true
     @AppStorage("playCompletionSound") private var playCompletionSound = true
-    @AppStorage("transcriptionHistoryEnabled") private var transcriptionHistoryEnabled = false
-    @AppStorage("transcriptionRetentionPeriod") private var transcriptionRetentionPeriodRaw = RetentionPeriod.oneMonth.rawValue
+    @AppStorage("transcriptionHistoryEnabled") private var transcriptionHistoryEnabled = true
+    @AppStorage("transcriptionRetentionPeriod") private var transcriptionRetentionPeriodRaw = RetentionPeriod.forever.rawValue
 
 
 
     private var retentionBinding: Binding<RetentionPeriod> {
         Binding(
-            get: { RetentionPeriod(rawValue: transcriptionRetentionPeriodRaw) ?? .oneMonth },
+            get: { RetentionPeriod(rawValue: transcriptionRetentionPeriodRaw) ?? .forever },
             set: { transcriptionRetentionPeriodRaw = $0.rawValue }
         )
     }

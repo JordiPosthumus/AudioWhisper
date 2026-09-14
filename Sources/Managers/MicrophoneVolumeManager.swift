@@ -222,7 +222,7 @@ internal enum VolumeError: LocalizedError {
 
 internal extension UserDefaults {
     var autoBoostMicrophoneVolume: Bool {
-        get { bool(forKey: "autoBoostMicrophoneVolume") }
+        get { object(forKey: "autoBoostMicrophoneVolume") as? Bool ?? true }
         set { set(newValue, forKey: "autoBoostMicrophoneVolume") }
     }
 }

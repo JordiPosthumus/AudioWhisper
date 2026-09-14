@@ -2,6 +2,8 @@ import AppKit
 
 internal extension AppDelegate {
     func setupNotificationObservers() {
+        NotificationCenter.default.addObserver(self, selector: #selector(onKeyboardAccessChanged),
+                                               name: SetupPermissions.keyboardAccessChanged, object: nil)
         NotificationCenter.default.addObserver(
             self,
             selector: #selector(showDashboard),
@@ -29,6 +31,12 @@ internal extension AppDelegate {
             name: .pressAndHoldSettingsChanged,
             object: nil
         )
+    }
+
+    @objc private func onKeyboardAccessChanged() {
+        // Reinstall monitors after permission is granted, without interrupting a hold.
+        guard !isHoldRecordingActive else { return }
+        configureShortcutMonitors()
     }
 
     @objc private func onPressAndHoldSettingsChanged(_ notification: Notification) {

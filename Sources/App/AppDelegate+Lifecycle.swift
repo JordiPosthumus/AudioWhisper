@@ -26,7 +26,8 @@ internal extension AppDelegate {
 
         // New installs finish setup before asking for microphone access.
         // Established installs retain their normal recorder initialization.
-        if LocalSetupManager.shared.isReady {
+        let needsPermissions = SetupPermissions.shared.needsSetup(configuration: pressAndHoldConfiguration)
+        if LocalSetupManager.shared.isReady && !needsPermissions {
             audioRecorder = AudioRecorder()
         }
 
@@ -53,7 +54,7 @@ internal extension AppDelegate {
 
         setupNotificationObservers()
 
-        if !LocalSetupManager.shared.isReady {
+        if !LocalSetupManager.shared.isReady || needsPermissions {
             showLocalSetup()
         }
 

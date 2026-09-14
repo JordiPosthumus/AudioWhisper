@@ -87,7 +87,7 @@ internal struct PressAndHoldConfiguration: Equatable {
     var mode: PressAndHoldMode
 
     static let defaults = PressAndHoldConfiguration(
-        enabled: false,
+        enabled: true,
         key: .rightCommand,
         mode: .hold
     )
@@ -138,12 +138,15 @@ internal enum PressAndHoldSettings {
 internal final class PressAndHoldKeyMonitor {
     typealias EventMonitorFactory = (NSEvent.EventTypeMask, @escaping (NSEvent) -> Void) -> Any?
     typealias EventMonitorRemoval = (Any) -> Void
+    typealias LocalMonitorFactory = (NSEvent.EventTypeMask, @escaping (NSEvent) -> NSEvent?) -> Any?
 
     private let configuration: PressAndHoldConfiguration
     private let keyDownHandler: () -> Void
     private let keyUpHandler: (() -> Void)?
     private let addGlobalMonitor: EventMonitorFactory
     private let removeMonitor: EventMonitorRemoval
+    private let addLocalMonitor: LocalMonitorFactory
+    private var localFlagsMonitor: Any?
 
     private var flagsMonitor: Any?
     private var keyDownMonitor: Any?
@@ -157,12 +160,14 @@ internal final class PressAndHoldKeyMonitor {
         keyDownHandler: @escaping () -> Void,
         keyUpHandler: (() -> Void)? = nil,
         addGlobalMonitor: @escaping EventMonitorFactory = NSEvent.addGlobalMonitorForEvents(matching:handler:),
+        addLocalMonitor: @escaping LocalMonitorFactory = NSEvent.addLocalMonitorForEvents(matching:handler:),
         removeMonitor: @escaping EventMonitorRemoval = NSEvent.removeMonitor(_:)
     ) {
         self.configuration = configuration
         self.keyDownHandler = keyDownHandler
         self.keyUpHandler = keyUpHandler
         self.addGlobalMonitor = addGlobalMonitor
+        self.addLocalMonitor = addLocalMonitor
         self.removeMonitor = removeMonitor
     }
 
@@ -173,6 +178,10 @@ internal final class PressAndHoldKeyMonitor {
         if modifierFlag == .command || modifierFlag == .option || modifierFlag == .control || modifierFlag == .function {
             flagsMonitor = addGlobalMonitor(.flagsChanged) { [weak self] event in
                 self?.handleModifierEvent(event)
+            }
+            localFlagsMonitor = addLocalMonitor(.flagsChanged) { [weak self] event in
+                self?.handleModifierEvent(event)
+                return event // Observe only; preserve normal Command shortcuts.
             }
         } else {
             keyDownMonitor = addGlobalMonitor(.keyDown) { [weak self] event in
@@ -185,6 +194,10 @@ internal final class PressAndHoldKeyMonitor {
     }
 
     func stop() {
+        if let monitor = localFlagsMonitor {
+            removeMonitor(monitor)
+            localFlagsMonitor = nil
+        }
         if let monitor = flagsMonitor {
             removeMonitor(monitor)
             flagsMonitor = nil
@@ -207,9 +220,26 @@ internal final class PressAndHoldKeyMonitor {
     private func handleModifierEvent(_ event: NSEvent) {
         guard event.type == .flagsChanged, event.keyCode == configuration.key.keyCode else { return }
 
-        monitorQueue.async { [weak self] in
-            self?.processTransition(isKeyDownEvent: !(self?.isPressed ?? false))
+        let isDown = Self.isModifierPressed(configuration.key, flags: event.modifierFlags)
+        monitorQueue.async { [weak self] in self?.processTransition(isKeyDownEvent: isDown) }
+    }
+
+    static func isModifierPressed(_ key: PressAndHoldKey, flags: NSEvent.ModifierFlags) -> Bool {
+        // Device-specific masks distinguish a released right modifier when its
+        // left counterpart remains held (IOLLEvent.h NX_DEVICE*KEYMASK values).
+        let mask: UInt
+        let pair: UInt
+        switch key {
+        case .rightCommand: (mask, pair) = (0x10, 0x18)
+        case .leftCommand: (mask, pair) = (0x08, 0x18)
+        case .rightOption: (mask, pair) = (0x40, 0x60)
+        case .leftOption: (mask, pair) = (0x20, 0x60)
+        case .rightControl: (mask, pair) = (0x2000, 0x2001)
+        case .leftControl: (mask, pair) = (0x01, 0x2001)
+        case .globe: return flags.contains(.function)
         }
+        if flags.rawValue & pair != 0 { return flags.rawValue & mask != 0 }
+        return flags.contains(key.modifierFlag)
     }
 
     private func handleKeyEvent(_ event: NSEvent, isKeyDown: Bool) {

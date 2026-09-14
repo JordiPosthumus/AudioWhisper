@@ -21,6 +21,7 @@ internal enum AppDefaults {
         static let transcriptionStreaming = "transcriptionStreaming"
         static let addTrailingSpace = "addTrailingSpace"
         static let globalHotkey = "globalHotkey"
+        static let autoBoostMicrophoneVolume = "autoBoostMicrophoneVolume"
 
         static let pressAndHoldEnabled = "pressAndHoldEnabled"
         static let pressAndHoldKeyIdentifier = "pressAndHoldKeyIdentifier"
@@ -31,26 +32,28 @@ internal enum AppDefaults {
     // Chosen defaults.
     internal static let defaultTranscriptionProvider: TranscriptionProvider = .parakeet
     internal static let defaultParakeetModel: ParakeetModel = .v2English
+    internal static let defaultGlobalHotkey = "⌥⌃Q"
 
     internal static func streamingEnabled(in defaults: UserDefaults = .standard) -> Bool {
         defaults.object(forKey: Keys.transcriptionStreaming) as? Bool ?? true
     }
 
-    internal static func register() {
-        UserDefaults.standard.register(defaults: [
+    internal static func register(using defaults: UserDefaults = .standard) {
+        defaults.register(defaults: [
             Keys.transcriptionProvider: defaultTranscriptionProvider.rawValue,
             Keys.selectedParakeetModel: defaultParakeetModel.rawValue,
 
 
             Keys.startAtLogin: false,
             Keys.playCompletionSound: true,
-            Keys.transcriptionHistoryEnabled: false,
-            Keys.transcriptionRetentionPeriod: RetentionPeriod.oneMonth.rawValue,
+            Keys.transcriptionHistoryEnabled: true,
+            Keys.transcriptionRetentionPeriod: RetentionPeriod.forever.rawValue,
+            Keys.autoBoostMicrophoneVolume: true,
             Keys.enableSmartPaste: false,
             Keys.immediateRecording: false,
             Keys.transcriptionStreaming: true,
             Keys.addTrailingSpace: true,
-            Keys.globalHotkey: "⌘⇧Space",
+            Keys.globalHotkey: defaultGlobalHotkey,
 
             Keys.pressAndHoldEnabled: PressAndHoldConfiguration.defaults.enabled,
             Keys.pressAndHoldKeyIdentifier: PressAndHoldConfiguration.defaults.key.rawValue,
